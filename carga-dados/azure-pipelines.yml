@@ -1,0 +1,67 @@
+name: Deploy and Run - Verificacao Carga Dados
+
+trigger:
+  branches:
+    include:
+      - main # Dispara automaticamente ao atualizar a main deste repositório
+  paths:
+    exclude:
+      - README.md
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - name: DATABRICKS_HOST
+    value: 'https://azuredatabricks.net' # URL do seu Workspace Databricks
+  - name: JOB_NAME
+    value: 'Job-Auditoria-Sequencial-Com-Requirements'
+  - name: TASK_KEY
+    value: '1_Verificar_Status_Carga' # Executa especificamente a primeira tarefa
+
+jobs:
+- job: TriggerDatabricksTask
+  displayName: 'Disparar Verificação de Carga no Databricks'
+  steps:
+
+  # Passo 1: Autenticar e obter o token OAuth dinâmico usando o Service Principal
+  - bash: |
+      echo "Solicitando Token de Acesso Azure para o Databricks..."
+      TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
+        -d "grant_type=client_credentials" \
+        -d "client_id=$(AZURE_CLIENT_ID)" \
+        -d "client_secret=$(AZURE_CLIENT_SECRET)" \
+        -d "scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default")
+      
+      DATABRICKS_TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
+      echo "##vso[task.setvariable variable=db_token;issetsecret=true]$DATABRICKS_TOKEN"
+    displayName: 'Obter Token OAuth Azure'
+    env:
+      AZURE_TENANT_ID: $(AZURE_TENANT_ID)
+      AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
+      AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+
+  # Passo 2: Buscar o ID do Job e rodar unicamente a tarefa de Carga
+  - bash: |
+      echo "Buscando o ID do Job no Databricks..."
+      JOB_ID=$(curl -s -X GET "$(DATABRICKS_HOST)/api/2.1/jobs/list" \
+        -H "Authorization: Bearer $(db_token)" \
+
+        | jq -r --arg NAME "$(JOB_NAME)" '.jobs[] | select(.settings.name==$NAME) | .job_id')
+
+      if [ -z "$JOB_ID" ] || [ "$JOB_ID" == "null" ]; then
+        echo "Erro: Job '$(JOB_NAME)' não encontrado no Databricks."
+        exit 1
+      fi
+
+      echo "Disparando unicamente a tarefa: $(TASK_KEY) para o Job ID: $JOB_ID"
+      curl -s -X POST "$(DATABRICKS_HOST)/api/2.1/jobs/run-now" \
+        -H "Authorization: Bearer $(db_token)" \
+        -H "Content-Type: application/json" \
+        -d "{
+          \"job_id\": $JOB_ID,
+          \"job_parameters\": {},
+          \"dependent_tasks_filter\": \"NONE\" 
+        }" | jq .
+        # O filtro "NONE" garante que rodará apenas a tarefa chamada, sem disparar as dependentes de forma forçada.
+    displayName: 'Executar Task de Carga no Databricks'

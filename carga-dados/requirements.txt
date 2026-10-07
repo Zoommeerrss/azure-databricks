@@ -1,0 +1,2 @@
+# Este projeto utiliza apenas dependências nativas do Runtime do Databricks (PySpark)
+# Nenhuma biblioteca externa é necessária para a execução do check_carga.py

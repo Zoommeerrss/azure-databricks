@@ -1,0 +1,26 @@
+# Local (.terraform)
+.terraform/
+
+# Arquivos de estado do Terraform (Contêm credenciais em texto claro)
+*.tfstate
+*.tfstate.*
+
+# Variáveis de ambiente e segredos locais
+*.tfvars
+*.tfvars.json
+.env
+
+# Arquivos de log do Terraform
+*.log
+crash.log
+
+# Arquivos de override do Terraform
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Arquivos ocultos de IDEs
+.vscode/
+.idea/
+.DS_Store
