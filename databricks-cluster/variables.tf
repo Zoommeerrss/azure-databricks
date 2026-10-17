@@ -12,7 +12,7 @@ variable "project_name" {
 
 variable "environment" {
   type        = string
-  description = "Ambiente atual (dev ou prod)"
+  description = "Ambiente atual de execução (dev ou main)" # Alinhado com o seu padrão de scripts
 }
 
 variable "git_branch" {
@@ -30,4 +30,10 @@ variable "force_enable_cluster" {
   type        = bool
   default     = true
   description = "Força a criação do cluster mesmo se o ambiente for dev (útil para testes)"
+}
+
+variable "databricks_metastore_id" {
+  type        = string
+  description = "O ID do metastore do Unity Catalog associado à região do Workspace Databricks."
+  default     = "14324fd2-1840-4517-af12-87931bc50524"
 }

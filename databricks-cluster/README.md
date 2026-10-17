@@ -96,3 +96,49 @@ O Terraform exibirá a URL direta de acesso ao Workspace e o ID do Workflow gera
 
 ### 2. Mecanismo de Autenticação e Provedores (`providers.tf`)
 O provedor do Databricks está parametrizado com `auth_type = "azure-cli"`. Isso garante que o Terraform herde os tokens de acesso gerados pelo comando `az login` executado localmente ou pelo Service Principal dentro de esteiras de CI/CD (GitHub Actions / Azure DevOps), eliminando a necessidade de gerenciamento manual de tokens PAT (Personal Access Tokens).
+
+# Troubleshooting
+
+## The plugin encountered an error, and failed to respond to the plugin6.(*GRPCProvider).ValidateProviderConfig call
+
+Esse erro ocorre quando o plugin do TerraForm parou abrutmamente sem conseguir avançar no processamento.
+
+```bash
+Plan: 12 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + workspace_url = (known after apply)
+╷
+│ Error: Plugin did not respond
+│ 
+│ The plugin encountered an error, and failed to respond to the plugin6.(*GRPCProvider).ValidateProviderConfig call. The plugin logs may contain more details.
+╵```
+
+Para tentar executar novamente, execute o comando abaixo para remover o arquivo gerado pelo TerraForm:
+
+```bash
+# Remova os plugins baixados localmente e o arquivo de trava
+rm -rf .terraform .terraform.lock.hcl
+
+# Force o Terraform a baixar e inicializar tudo do zero
+terraform init
+```
+
+## Note: You didn't use the -out option to save this plan, so Terraform can't guarantee to take exactly these actions if you run "terraform apply" now.
+
+Essa mensagem não é um erro, mas sim um aviso de segurança e boas práticas do Terraform. Ela aparece sempre que você executa um terraform plan de forma isolada, sem salvar o resultado em um arquivo.
+
+O Terraform está apenas alertando que, se você rodar o terraform apply agora, ele precisará recalcular todo o plano do zero. Se alguém tiver alterado algo na sua infraestrutura na nuvem nesse meio tempo, as ações reais do apply podem ser diferentes das que você acabou de ver na tela.
+
+
+1. Gere e salve o plano em um arquivo:
+
+```bash
+terraform plan -out=install_plan.tfplan
+```
+
+2. Aplique exatamente esse plano salvo
+
+```bash
+terraform apply "install_plan.tfplan"
+```

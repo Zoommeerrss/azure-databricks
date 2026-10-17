@@ -21,3 +21,6 @@ provider "databricks" {
   host                        = azurerm_databricks_workspace.db_workspace.workspace_url
   auth_type                   = "azure-cli" # Usa a mesma sessão do seu terminal ou pipeline da Azure
 }
+
+# Captura dinâmica da assinatura logada via Azure CLI
+data "azurerm_subscription" "current" {}

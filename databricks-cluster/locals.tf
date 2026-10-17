@@ -12,6 +12,11 @@ locals {
     Environment = local.env
     Project     = "Databricks-LowCost-Lab"
     ManagedBy   = "Terraform"
-    CostCenter  = "Auditoria-DataQuality"
+    
+    # Segrega automaticamente os custos no mesmo pilar gerencial (ex: Auditoria-DataQuality-dev)
+    CostCenter  = "Auditoria-DataQuality-${local.env}"
+    
+    # Consome o ID da assinatura descoberto pelo data source do providers.tf
+    SubscriptionId = data.azurerm_subscription.current.subscription_id
   }
 }
