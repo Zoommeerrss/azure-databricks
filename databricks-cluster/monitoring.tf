@@ -13,18 +13,12 @@ resource "azurerm_monitor_diagnostic_setting" "dbx_telemetry" {
   target_resource_id         = azurerm_databricks_workspace.db_workspace.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
 
+  # CORRIGIDO: Sintaxe oficial para capturar todos os logs de auditoria do Databricks
   enabled_log {
-    category = "unityCatalog"
+    category_group = "allLogs"
   }
 
-  enabled_log {
-    category = "clusters"
-  }
-
-  enabled_log {
-    category = "jobs"
-  }
-
+  # Mantém a coleta de métricas de performance ativada
   metric {
     category = "AllMetrics"
     enabled  = true

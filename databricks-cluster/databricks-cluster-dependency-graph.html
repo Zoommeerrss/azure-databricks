@@ -1,0 +1,3615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Terraform Dependency Graph (exported)</title>
+  <style>
+    /* Frozen real theme values, captured from the live VS Code webview at
+       export time (see webview/src/main.ts's gatherResolvedColors()) -
+       standing in for what a real VS Code webview host would otherwise
+       inject automatically, same role webview/dev-preview.html's hardcoded
+       :root block plays, but with genuinely captured values instead of a
+       hand-picked approximation. */
+    :root {
+      --tf-accent-config: #297aa0;
+      --tf-accent-module: #0078d4;
+      --tf-accent-primary: #297aa0;
+      --vscode-button-background: #297aa0;
+      --vscode-button-border: #297aa0;
+      --vscode-button-foreground: #ffffff;
+      --vscode-button-hoverBackground: #2b7da3;
+      --vscode-button-secondaryBackground: rgba(0, 0, 0, 0);
+      --vscode-button-secondaryForeground: #cccccc;
+      --vscode-button-secondaryHoverBackground: rgba(255, 255, 255, 0.06);
+      --vscode-charts-blue: #57a3f8;
+      --vscode-charts-orange: #cd861a;
+      --vscode-charts-purple: #ad80d7;
+      --vscode-checkbox-background: #242526;
+      --vscode-checkbox-border: #707070;
+      --vscode-descriptionForeground: #8c8c8c;
+      --vscode-editor-background: #121314;
+      --vscode-editor-font-family: Consolas, 'Courier New', monospace;
+      --vscode-editor-foreground: #bbbebf;
+      --vscode-editor-inactiveSelectionBackground: rgba(39, 103, 130, 0.38);
+      --vscode-editorLineNumber-foreground: #858889;
+      --vscode-errorForeground: #f48771;
+      --vscode-focusBorder: rgba(57, 148, 188, 0.7);
+      --vscode-font-family: "Segoe WPC", "Segoe UI", sans-serif;
+      --vscode-font-size: 13px;
+      --vscode-input-background: #191a1b;
+      --vscode-input-border: #333536;
+      --vscode-input-foreground: #bfbfbf;
+      --vscode-input-placeholderForeground: #555555;
+      --vscode-panel-border: #2a2b2c;
+      --vscode-statusBarItem-remoteBackground: #0078d4;
+      --vscode-textLink-foreground: #48a0c7;
+      --vscode-widget-shadow: rgba(0, 0, 0, 0.36);
+    }
+/* webview/src/theme.css */
+:root {
+  --tf-accent-primary: var( --vscode-button-background, var(--vscode-textLink-foreground, var(--vscode-charts-blue)) );
+  --tf-accent-module: var( --vscode-statusBarItem-remoteBackground, var(--vscode-focusBorder, var(--vscode-charts-purple)) );
+  --tf-accent-config: var( --vscode-button-background, var(--vscode-focusBorder, var(--vscode-charts-orange)) );
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+}
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  flex: 0 0 auto;
+}
+.toolbar[hidden] {
+  display: none;
+}
+.toolbar-search {
+  flex: 1 1 auto;
+  min-width: 120px;
+  max-width: 320px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-family: inherit;
+  font-size: inherit;
+}
+.toolbar-search::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+}
+.toolbar-search:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+.toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  user-select: none;
+}
+.toolbar-toggle input[type=checkbox] {
+  accent-color: var(--vscode-checkbox-background);
+  border: 1px solid var(--vscode-checkbox-border);
+}
+.toolbar-button {
+  background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.toolbar-button:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+}
+.toolbar-button:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+.context-menu {
+  position: fixed;
+  z-index: 20;
+  background-color: var(--vscode-menu-background, var(--vscode-editor-background));
+  color: var(--vscode-menu-foreground, var(--vscode-editor-foreground));
+  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  padding: 4px;
+}
+.context-menu[hidden] {
+  display: none;
+}
+.context-menu-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
+  background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-menu-selectionForeground, inherit);
+  outline: none;
+}
+.main-area {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.graph-container {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.graph-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.graph-svg:active {
+  cursor: grabbing;
+}
+.error-state {
+  padding: 16px;
+  color: var(--vscode-errorForeground, var(--vscode-editor-foreground));
+  font-family: var(--vscode-editor-font-family, monospace);
+  white-space: pre-wrap;
+}
+.info-panel[hidden] {
+  display: none;
+}
+.info-panel {
+  flex: 0 0 260px;
+  max-width: 320px;
+  overflow-y: auto;
+  border-left: 1px solid var(--vscode-panel-border);
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+.info-section + .info-section {
+  margin-top: 18px;
+}
+.info-section-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+.info-section-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.info-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  box-sizing: border-box;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  color: inherit;
+}
+.info-row:hover {
+  background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.08));
+}
+.info-row:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+.info-row-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+}
+.info-row-detail {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.85;
+}
+.cluster-rect {
+  fill: var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.06));
+  stroke: var(--vscode-panel-border);
+  stroke-width: 1;
+  stroke-opacity: 0.55;
+}
+.cluster-module.cluster .cluster-rect {
+  fill: var(--tf-accent-module);
+  fill-opacity: 0.08;
+  stroke: var(--tf-accent-module);
+  stroke-opacity: 0.5;
+}
+.cluster-module {
+  cursor: pointer;
+}
+.cluster-module:hover .cluster-rect {
+  fill-opacity: 0.14;
+  stroke-opacity: 0.75;
+}
+.cluster-label-dot {
+  fill: var(--tf-accent-module);
+  opacity: 0.65;
+}
+.cluster-label {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.edge-path {
+  fill: none;
+  stroke: var(--vscode-editorLineNumber-foreground, var(--vscode-panel-border));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  transition: opacity 120ms ease-out;
+}
+.edge-arrowhead {
+  fill: var(--vscode-editorLineNumber-foreground, var(--vscode-panel-border));
+}
+.edge-path.edge-dimmed {
+  opacity: 0.15;
+}
+.node-shadow-flood {
+  flood-color: var(--vscode-widget-shadow, rgba(0, 0, 0, 0.45));
+  flood-opacity: 0.4;
+}
+.node-shadow-flood-hover {
+  flood-color: var(--vscode-widget-shadow, rgba(0, 0, 0, 0.5));
+  flood-opacity: 0.55;
+}
+.node-gradient-stop-start {
+  stop-color: var(--vscode-editor-background);
+  stop-opacity: 1;
+}
+.node-gradient-stop-end-resource,
+.node-gradient-stop-end-data {
+  stop-color: var(--tf-accent-primary);
+  stop-opacity: 0.08;
+}
+.node-gradient-stop-end-module {
+  stop-color: var(--tf-accent-module);
+  stop-opacity: 0.09;
+}
+.node-gradient-stop-end-config {
+  stop-color: var(--tf-accent-config);
+  stop-opacity: 0.08;
+}
+.node {
+  cursor: grab;
+}
+.node,
+.cluster {
+  transition: opacity 120ms ease-out;
+}
+.node.graph-dimmed,
+.cluster.graph-dimmed {
+  opacity: 0.2;
+}
+.node.node-dragging {
+  cursor: grabbing;
+}
+.node-card {
+  filter: url(#tf-node-shadow);
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transition: transform 160ms ease-out, filter 160ms ease-out;
+}
+.node:hover .node-card,
+.node:focus-visible .node-card {
+  filter: url(#tf-node-shadow-hover) brightness(1.06);
+  transform: scale(1.02);
+}
+.node:hover .node-rect,
+.node:focus-visible .node-rect {
+  stroke-width: 2.25;
+}
+.node-rect {
+  fill: url(#tf-node-gradient-resource);
+  stroke: var(--tf-accent-primary);
+  stroke-width: 1.5;
+  transition: stroke-width 160ms ease-out;
+}
+.node-label {
+  fill: var(--vscode-editor-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  dominant-baseline: middle;
+}
+.node-type {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.015em;
+  dominant-baseline: middle;
+}
+.node-detail {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 9px;
+  font-style: italic;
+  opacity: 0.6;
+  dominant-baseline: middle;
+}
+.node-icon {
+  display: block;
+  color: var(--tf-accent-primary);
+  position: relative;
+}
+.node-icon-badge {
+  fill: var(--tf-accent-primary);
+  fill-opacity: 0.16;
+}
+.node-kind-resource .node-rect {
+  fill: url(#tf-node-gradient-resource);
+  stroke: var(--tf-accent-primary);
+}
+.node-kind-resource .node-icon,
+.node-kind-resource .node-icon-badge {
+  color: var(--tf-accent-primary);
+}
+.node-kind-resource .node-icon-badge {
+  fill: var(--tf-accent-primary);
+}
+.node-kind-data .node-rect {
+  fill: url(#tf-node-gradient-data);
+  stroke: var(--tf-accent-primary);
+  stroke-dasharray: 5 3;
+}
+.node-kind-data .node-icon,
+.node-kind-data .node-icon-badge {
+  color: var(--tf-accent-primary);
+}
+.node-kind-data .node-icon-badge {
+  fill: var(--tf-accent-primary);
+}
+.node-kind-module {
+  filter: hue-rotate(48deg);
+}
+.node-kind-module .node-rect {
+  fill: url(#tf-node-gradient-module);
+  stroke: var(--tf-accent-module);
+  stroke-width: 2;
+}
+.node-kind-module .node-icon,
+.node-kind-module .node-icon-badge {
+  color: var(--tf-accent-module);
+}
+.node-kind-module .node-icon-badge {
+  fill: var(--tf-accent-module);
+}
+.node-config {
+  filter: hue-rotate(-48deg);
+}
+.node-config .node-rect {
+  fill: url(#tf-node-gradient-config);
+  stroke: var(--tf-accent-config);
+  stroke-dasharray: 3 3;
+  opacity: 0.85;
+}
+.node-config .node-icon,
+.node-config .node-icon-badge {
+  color: var(--tf-accent-config);
+}
+.node-config .node-icon-badge {
+  fill: var(--tf-accent-config);
+}
+.node-config .node-icon {
+  opacity: 0.85;
+}
+.node-config .node-icon-badge {
+  fill-opacity: 0.14;
+}
+.node-config .node-label {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  font-weight: 600;
+}
+.node-chip {
+  filter: hue-rotate(-48deg);
+}
+.node-chip-rect {
+  fill: var(--tf-accent-config);
+  fill-opacity: 0.14;
+  stroke: var(--tf-accent-config);
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+}
+.node-chip-label {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 9px;
+  font-weight: 500;
+  dominant-baseline: middle;
+}
+/*# sourceMappingURL=webview.css.map */
+
+
+    /* Exported-only override: a standalone file has no extension host to
+       act on the search box, "show variables/outputs/locals" or "Live"
+       checkboxes, or the "Fit to view"/"Export HTML" buttons - "Export
+       HTML"'s postMessage is just console-logged (see the acquireVsCodeApi
+       stub below), and "Live" mode has nothing to follow without a real VS
+       Code window. Hiding the whole toolbar leaves just the diagram, which
+       is what a "snapshot to share" export is for; .main-area's own
+       flex: 1 1 auto (theme.css) then fills the freed vertical space
+       automatically, no other layout change needed. */
+    .toolbar {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // Stub of the ambient global every real VS Code webview provides
+    // exactly once - this exported file has no extension host on the other
+    // end after export, so postMessage calls (node click "navigate", drag
+    // "positionsChanged", ...) are just logged instead of bridged anywhere,
+    // matching webview/dev-preview.html's own harness stub.
+    window.acquireVsCodeApi = function () {
+      return {
+        postMessage: function (message) {
+          console.log('[exported graph] postMessage from webview:', message);
+        },
+        getState: function () {
+          return undefined;
+        },
+        setState: function () {
+          /* no-op */
+        },
+      };
+    };
+  </script>
+  <script>
+"use strict";
+(() => {
+  // node_modules/@dagrejs/dagre/dist/dagre.esm.js
+  var ge = Object.defineProperty;
+  var hn = (e, n, t) => n in e ? ge(e, n, { enumerable: true, configurable: true, writable: true, value: t }) : e[n] = t;
+  var fn = (e, n) => {
+    for (var t in n) ge(e, t, { get: n[t], enumerable: true });
+  };
+  var pe = (e, n, t) => hn(e, typeof n != "symbol" ? n + "" : n, t);
+  var z = {};
+  fn(z, { Graph: () => p, alg: () => R, json: () => ye, version: () => pn });
+  var bn = Object.defineProperty;
+  var Le = (e, n) => {
+    for (var t in n) bn(e, t, { get: n[t], enumerable: true });
+  };
+  var p = class {
+    constructor(e) {
+      this._isDirected = true, this._isMultigraph = false, this._isCompound = false, this._nodes = {}, this._in = {}, this._preds = {}, this._out = {}, this._sucs = {}, this._edgeObjs = {}, this._edgeLabels = {}, this._nodeCount = 0, this._edgeCount = 0, this._defaultNodeLabelFn = () => {
+      }, this._defaultEdgeLabelFn = () => {
+      }, e && (this._isDirected = "directed" in e ? e.directed : true, this._isMultigraph = "multigraph" in e ? e.multigraph : false, this._isCompound = "compound" in e ? e.compound : false), this._isCompound && (this._parent = {}, this._children = {}, this._children["\0"] = {});
+    }
+    isDirected() {
+      return this._isDirected;
+    }
+    isMultigraph() {
+      return this._isMultigraph;
+    }
+    isCompound() {
+      return this._isCompound;
+    }
+    setGraph(e) {
+      return this._label = e, this;
+    }
+    graph() {
+      return this._label;
+    }
+    setDefaultNodeLabel(e) {
+      return typeof e != "function" ? this._defaultNodeLabelFn = () => e : this._defaultNodeLabelFn = e, this;
+    }
+    nodeCount() {
+      return this._nodeCount;
+    }
+    nodes() {
+      return Object.keys(this._nodes);
+    }
+    sources() {
+      return this.nodes().filter((e) => Object.keys(this._in[e]).length === 0);
+    }
+    sinks() {
+      return this.nodes().filter((e) => Object.keys(this._out[e]).length === 0);
+    }
+    setNodes(e, n) {
+      return e.forEach((t) => {
+        n !== void 0 ? this.setNode(t, n) : this.setNode(t);
+      }), this;
+    }
+    setNode(e, n) {
+      return e in this._nodes ? (arguments.length > 1 && (this._nodes[e] = n), this) : (this._nodes[e] = arguments.length > 1 ? n : this._defaultNodeLabelFn(e), this._isCompound && (this._parent[e] = "\0", this._children[e] = {}, this._children["\0"][e] = true), this._in[e] = {}, this._preds[e] = {}, this._out[e] = {}, this._sucs[e] = {}, ++this._nodeCount, this);
+    }
+    node(e) {
+      return this._nodes[e];
+    }
+    hasNode(e) {
+      return e in this._nodes;
+    }
+    removeNode(e) {
+      if (e in this._nodes) {
+        let n = (t) => this.removeEdge(this._edgeObjs[t]);
+        delete this._nodes[e], this._isCompound && (this._removeFromParentsChildList(e), delete this._parent[e], this.children(e).forEach((t) => {
+          this.setParent(t);
+        }), delete this._children[e]), Object.keys(this._in[e]).forEach(n), delete this._in[e], delete this._preds[e], Object.keys(this._out[e]).forEach(n), delete this._out[e], delete this._sucs[e], --this._nodeCount;
+      }
+      return this;
+    }
+    setParent(e, n) {
+      if (!this._isCompound) throw new Error("Cannot set parent in a non-compound graph");
+      if (n === void 0) n = "\0";
+      else {
+        n += "";
+        for (let t = n; t !== void 0; t = this.parent(t)) if (t === e) throw new Error("Setting " + n + " as parent of " + e + " would create a cycle");
+        this.setNode(n);
+      }
+      return this.setNode(e), this._removeFromParentsChildList(e), this._parent[e] = n, this._children[n][e] = true, this;
+    }
+    parent(e) {
+      if (this._isCompound) {
+        let n = this._parent[e];
+        if (n !== "\0") return n;
+      }
+    }
+    children(e = "\0") {
+      if (this._isCompound) {
+        let n = this._children[e];
+        if (n) return Object.keys(n);
+      } else {
+        if (e === "\0") return this.nodes();
+        if (this.hasNode(e)) return [];
+      }
+      return [];
+    }
+    predecessors(e) {
+      let n = this._preds[e];
+      if (n) return Object.keys(n);
+    }
+    successors(e) {
+      let n = this._sucs[e];
+      if (n) return Object.keys(n);
+    }
+    neighbors(e) {
+      let n = this.predecessors(e);
+      if (n) {
+        let t = new Set(n);
+        for (let r of this.successors(e)) t.add(r);
+        return Array.from(t.values());
+      }
+    }
+    isLeaf(e) {
+      let n;
+      return this.isDirected() ? n = this.successors(e) : n = this.neighbors(e), n.length === 0;
+    }
+    filterNodes(e) {
+      let n = new this.constructor({ directed: this._isDirected, multigraph: this._isMultigraph, compound: this._isCompound });
+      n.setGraph(this.graph()), Object.entries(this._nodes).forEach(([o, i]) => {
+        e(o) && n.setNode(o, i);
+      }), Object.values(this._edgeObjs).forEach((o) => {
+        n.hasNode(o.v) && n.hasNode(o.w) && n.setEdge(o, this.edge(o));
+      });
+      let t = {}, r = (o) => {
+        let i = this.parent(o);
+        return !i || n.hasNode(i) ? (t[o] = i != null ? i : void 0, i != null ? i : void 0) : i in t ? t[i] : r(i);
+      };
+      return this._isCompound && n.nodes().forEach((o) => n.setParent(o, r(o))), n;
+    }
+    setDefaultEdgeLabel(e) {
+      return typeof e != "function" ? this._defaultEdgeLabelFn = () => e : this._defaultEdgeLabelFn = e, this;
+    }
+    edgeCount() {
+      return this._edgeCount;
+    }
+    edges() {
+      return Object.values(this._edgeObjs);
+    }
+    setPath(e, n) {
+      return e.reduce((t, r) => (n !== void 0 ? this.setEdge(t, r, n) : this.setEdge(t, r), r)), this;
+    }
+    setEdge(e, n, t, r) {
+      let o, i, s, a, d = false;
+      typeof e == "object" && e !== null && "v" in e ? (o = e.v, i = e.w, s = e.name, arguments.length === 2 && (a = n, d = true)) : (o = e, i = n, s = r, arguments.length > 2 && (a = t, d = true)), o = "" + o, i = "" + i, s !== void 0 && (s = "" + s);
+      let l = C(this._isDirected, o, i, s);
+      if (l in this._edgeLabels) return d && (this._edgeLabels[l] = a), this;
+      if (s !== void 0 && !this._isMultigraph) throw new Error("Cannot set a named edge when isMultigraph = false");
+      this.setNode(o), this.setNode(i), this._edgeLabels[l] = d ? a : this._defaultEdgeLabelFn(o, i, s);
+      let u = gn(this._isDirected, o, i, s);
+      return o = u.v, i = u.w, Object.freeze(u), this._edgeObjs[l] = u, me(this._preds[i], o), me(this._sucs[o], i), this._in[i][l] = u, this._out[o][l] = u, this._edgeCount++, this;
+    }
+    edge(e, n, t) {
+      let r = arguments.length === 1 ? Y(this._isDirected, e) : C(this._isDirected, e, n, t);
+      return this._edgeLabels[r];
+    }
+    edgeAsObj(e, n, t) {
+      let r = arguments.length === 1 ? this.edge(e) : this.edge(e, n, t);
+      return typeof r != "object" ? { label: r } : r;
+    }
+    hasEdge(e, n, t) {
+      return (arguments.length === 1 ? Y(this._isDirected, e) : C(this._isDirected, e, n, t)) in this._edgeLabels;
+    }
+    removeEdge(e, n, t) {
+      let r = arguments.length === 1 ? Y(this._isDirected, e) : C(this._isDirected, e, n, t), o = this._edgeObjs[r];
+      if (o) {
+        let i = o.v, s = o.w;
+        delete this._edgeLabels[r], delete this._edgeObjs[r], Ee(this._preds[s], i), Ee(this._sucs[i], s), delete this._in[s][r], delete this._out[i][r], this._edgeCount--;
+      }
+      return this;
+    }
+    inEdges(e, n) {
+      return this.isDirected() ? this.filterEdges(this._in[e], e, n) : this.nodeEdges(e, n);
+    }
+    outEdges(e, n) {
+      return this.isDirected() ? this.filterEdges(this._out[e], e, n) : this.nodeEdges(e, n);
+    }
+    nodeEdges(e, n) {
+      if (e in this._nodes) return this.filterEdges({ ...this._in[e], ...this._out[e] }, e, n);
+    }
+    _removeFromParentsChildList(e) {
+      delete this._children[this._parent[e]][e];
+    }
+    filterEdges(e, n, t) {
+      if (!e) return;
+      let r = Object.values(e);
+      return t ? r.filter((o) => o.v === n && o.w === t || o.v === t && o.w === n) : r;
+    }
+  };
+  function me(e, n) {
+    e[n] ? e[n]++ : e[n] = 1;
+  }
+  function Ee(e, n) {
+    e[n] !== void 0 && !--e[n] && delete e[n];
+  }
+  function C(e, n, t, r) {
+    let o = "" + n, i = "" + t;
+    if (!e && o > i) {
+      let s = o;
+      o = i, i = s;
+    }
+    return o + "" + i + "" + (r === void 0 ? "\0" : r);
+  }
+  function gn(e, n, t, r) {
+    let o = "" + n, i = "" + t;
+    if (!e && o > i) {
+      let a = o;
+      o = i, i = a;
+    }
+    let s = { v: o, w: i };
+    return r && (s.name = r), s;
+  }
+  function Y(e, n) {
+    return C(e, n.v, n.w, n.name);
+  }
+  var pn = "4.0.1";
+  var ye = {};
+  Le(ye, { read: () => yn, write: () => mn });
+  function mn(e) {
+    let n = { options: { directed: e.isDirected(), multigraph: e.isMultigraph(), compound: e.isCompound() }, nodes: En(e), edges: Ln(e) }, t = e.graph();
+    return t !== void 0 && (n.value = structuredClone(t)), n;
+  }
+  function En(e) {
+    return e.nodes().map((n) => {
+      let t = e.node(n), r = e.parent(n), o = { v: n };
+      return t !== void 0 && (o.value = t), r !== void 0 && (o.parent = r), o;
+    });
+  }
+  function Ln(e) {
+    return e.edges().map((n) => {
+      let t = e.edge(n), r = { v: n.v, w: n.w };
+      return n.name !== void 0 && (r.name = n.name), t !== void 0 && (r.value = t), r;
+    });
+  }
+  function yn(e) {
+    let n = new p(e.options);
+    return e.value !== void 0 && n.setGraph(e.value), e.nodes.forEach((t) => {
+      n.setNode(t.v, t.value), t.parent && n.setParent(t.v, t.parent);
+    }), e.edges.forEach((t) => {
+      n.setEdge({ v: t.v, w: t.w, name: t.name }, t.value);
+    }), n;
+  }
+  var R = {};
+  Le(R, { CycleException: () => D, bellmanFord: () => we, components: () => Gn, dijkstra: () => F, dijkstraAll: () => _n, findCycles: () => xn, floydWarshall: () => On, isAcyclic: () => Cn, postorder: () => Pn, preorder: () => Mn, prim: () => jn, shortestPaths: () => Sn, tarjan: () => Ge, topsort: () => ke });
+  var wn = () => 1;
+  function we(e, n, t, r) {
+    return Nn(e, String(n), t || wn, r || function(o) {
+      return e.outEdges(o);
+    });
+  }
+  function Nn(e, n, t, r) {
+    let o = {}, i, s = 0, a = e.nodes(), d = function(c) {
+      let h = t(c);
+      o[c.v].distance + h < o[c.w].distance && (o[c.w] = { distance: o[c.v].distance + h, predecessor: c.v }, i = true);
+    }, l = function() {
+      a.forEach(function(c) {
+        r(c).forEach(function(h) {
+          let f = h.v === c ? h.v : h.w, g = f === h.v ? h.w : h.v;
+          d({ v: f, w: g });
+        });
+      });
+    };
+    a.forEach(function(c) {
+      let h = c === n ? 0 : Number.POSITIVE_INFINITY;
+      o[c] = { distance: h, predecessor: "" };
+    });
+    let u = a.length;
+    for (let c = 1; c < u && (i = false, s++, l(), !!i); c++) ;
+    if (s === u - 1 && (i = false, l(), i)) throw new Error("The graph contains a negative weight cycle");
+    return o;
+  }
+  function Gn(e) {
+    let n = {}, t = [], r;
+    function o(i) {
+      i in n || (n[i] = true, r.push(i), e.successors(i).forEach(o), e.predecessors(i).forEach(o));
+    }
+    return e.nodes().forEach(function(i) {
+      r = [], o(i), r.length && t.push(r);
+    }), t;
+  }
+  var Ne = class {
+    constructor() {
+      this._arr = [], this._keyIndices = {};
+    }
+    size() {
+      return this._arr.length;
+    }
+    keys() {
+      return this._arr.map((e) => e.key);
+    }
+    has(e) {
+      return e in this._keyIndices;
+    }
+    priority(e) {
+      let n = this._keyIndices[e];
+      if (n !== void 0) return this._arr[n].priority;
+    }
+    min() {
+      if (this.size() === 0) throw new Error("Queue underflow");
+      return this._arr[0].key;
+    }
+    add(e, n) {
+      let t = this._keyIndices, r = String(e);
+      if (!(r in t)) {
+        let o = this._arr, i = o.length;
+        return t[r] = i, o.push({ key: r, priority: n }), this._decrease(i), true;
+      }
+      return false;
+    }
+    removeMin() {
+      this._swap(0, this._arr.length - 1);
+      let e = this._arr.pop();
+      return delete this._keyIndices[e.key], this._heapify(0), e.key;
+    }
+    decrease(e, n) {
+      let t = this._keyIndices[e];
+      if (t === void 0) throw new Error(`Key not found: ${e}`);
+      let r = this._arr[t].priority;
+      if (n > r) throw new Error(`New priority is greater than current priority. Key: ${e} Old: ${r} New: ${n}`);
+      this._arr[t].priority = n, this._decrease(t);
+    }
+    _heapify(e) {
+      let n = this._arr, t = 2 * e, r = t + 1, o = e;
+      t < n.length && (o = n[t].priority < n[o].priority ? t : o, r < n.length && (o = n[r].priority < n[o].priority ? r : o), o !== e && (this._swap(e, o), this._heapify(o)));
+    }
+    _decrease(e) {
+      let n = this._arr, t = n[e].priority, r;
+      for (; e !== 0 && (r = e >> 1, !(n[r].priority < t)); ) this._swap(e, r), e = r;
+    }
+    _swap(e, n) {
+      let t = this._arr, r = this._keyIndices, o = t[e], i = t[n];
+      t[e] = i, t[n] = o, r[i.key] = e, r[o.key] = n;
+    }
+  };
+  var kn = () => 1;
+  function F(e, n, t, r) {
+    let o = function(i) {
+      return e.outEdges(i);
+    };
+    return vn(e, String(n), t || kn, r || o);
+  }
+  function vn(e, n, t, r) {
+    let o = {}, i = new Ne(), s, a, d = function(l) {
+      let u = l.v !== s ? l.v : l.w, c = o[u], h = t(l), f = a.distance + h;
+      if (h < 0) throw new Error("dijkstra does not allow negative edge weights. Bad edge: " + l + " Weight: " + h);
+      f < c.distance && (c.distance = f, c.predecessor = s, i.decrease(u, f));
+    };
+    for (e.nodes().forEach(function(l) {
+      let u = l === n ? 0 : Number.POSITIVE_INFINITY;
+      o[l] = { distance: u, predecessor: "" }, i.add(l, u);
+    }); i.size() > 0 && (s = i.removeMin(), a = o[s], a.distance !== Number.POSITIVE_INFINITY); ) r(s).forEach(d);
+    return o;
+  }
+  function _n(e, n, t) {
+    return e.nodes().reduce(function(r, o) {
+      return r[o] = F(e, o, n, t), r;
+    }, {});
+  }
+  function Ge(e) {
+    let n = 0, t = [], r = {}, o = [];
+    function i(s) {
+      let a = r[s] = { onStack: true, lowlink: n, index: n++ };
+      if (t.push(s), e.successors(s).forEach(function(d) {
+        d in r ? r[d].onStack && (a.lowlink = Math.min(a.lowlink, r[d].index)) : (i(d), a.lowlink = Math.min(a.lowlink, r[d].lowlink));
+      }), a.lowlink === a.index) {
+        let d = [], l;
+        do
+          l = t.pop(), r[l].onStack = false, d.push(l);
+        while (s !== l);
+        o.push(d);
+      }
+    }
+    return e.nodes().forEach(function(s) {
+      s in r || i(s);
+    }), o;
+  }
+  function xn(e) {
+    return Ge(e).filter(function(n) {
+      return n.length > 1 || n.length === 1 && e.hasEdge(n[0], n[0]);
+    });
+  }
+  var Tn = () => 1;
+  function On(e, n, t) {
+    return In(e, n || Tn, t || function(r) {
+      return e.outEdges(r);
+    });
+  }
+  function In(e, n, t) {
+    let r = {}, o = e.nodes();
+    return o.forEach(function(i) {
+      r[i] = {}, r[i][i] = { distance: 0, predecessor: "" }, o.forEach(function(s) {
+        i !== s && (r[i][s] = { distance: Number.POSITIVE_INFINITY, predecessor: "" });
+      }), t(i).forEach(function(s) {
+        let a = s.v === i ? s.w : s.v, d = n(s);
+        r[i][a] = { distance: d, predecessor: i };
+      });
+    }), o.forEach(function(i) {
+      let s = r[i];
+      o.forEach(function(a) {
+        let d = r[a];
+        o.forEach(function(l) {
+          let u = d[i], c = s[l], h = d[l], f = u.distance + c.distance;
+          f < h.distance && (h.distance = f, h.predecessor = c.predecessor);
+        });
+      });
+    }), r;
+  }
+  var D = class extends Error {
+    constructor(...e) {
+      super(...e);
+    }
+  };
+  function ke(e) {
+    let n = {}, t = {}, r = [];
+    function o(i) {
+      if (i in t) throw new D();
+      i in n || (t[i] = true, n[i] = true, e.predecessors(i).forEach(o), delete t[i], r.push(i));
+    }
+    if (e.sinks().forEach(o), Object.keys(n).length !== e.nodeCount()) throw new D();
+    return r;
+  }
+  function Cn(e) {
+    try {
+      ke(e);
+    } catch (n) {
+      if (n instanceof D) return false;
+      throw n;
+    }
+    return true;
+  }
+  function Rn(e, n, t, r, o) {
+    Array.isArray(n) || (n = [n]);
+    let i = ((a) => {
+      var d;
+      return (d = e.isDirected() ? e.successors(a) : e.neighbors(a)) != null ? d : [];
+    }), s = {};
+    return n.forEach(function(a) {
+      if (!e.hasNode(a)) throw new Error("Graph does not have node: " + a);
+      o = ve(e, a, t === "post", s, i, r, o);
+    }), o;
+  }
+  function ve(e, n, t, r, o, i, s) {
+    return n in r || (r[n] = true, t || (s = i(s, n)), o(n).forEach(function(a) {
+      s = ve(e, a, t, r, o, i, s);
+    }), t && (s = i(s, n))), s;
+  }
+  function _e(e, n, t) {
+    return Rn(e, n, t, function(r, o) {
+      return r.push(o), r;
+    }, []);
+  }
+  function Pn(e, n) {
+    return _e(e, n, "post");
+  }
+  function Mn(e, n) {
+    return _e(e, n, "pre");
+  }
+  function jn(e, n) {
+    let t = new p(), r = {}, o = new Ne(), i;
+    function s(d) {
+      let l = d.v === i ? d.w : d.v, u = o.priority(l);
+      if (u !== void 0) {
+        let c = n(d);
+        c < u && (r[l] = i, o.decrease(l, c));
+      }
+    }
+    if (e.nodeCount() === 0) return t;
+    e.nodes().forEach(function(d) {
+      o.add(d, Number.POSITIVE_INFINITY), t.setNode(d);
+    }), o.decrease(e.nodes()[0], 0);
+    let a = false;
+    for (; o.size() > 0; ) {
+      if (i = o.removeMin(), i in r) t.setEdge(i, r[i]);
+      else {
+        if (a) throw new Error("Input graph is not connected: " + e);
+        a = true;
+      }
+      e.nodeEdges(i).forEach(s);
+    }
+    return t;
+  }
+  function Sn(e, n, t, r) {
+    return Fn(e, n, t, r != null ? r : ((o) => {
+      let i = e.outEdges(o);
+      return i != null ? i : [];
+    }));
+  }
+  function Fn(e, n, t, r) {
+    if (t === void 0) return F(e, n, t, r);
+    let o = false, i = e.nodes();
+    for (let s = 0; s < i.length; s++) {
+      let a = r(i[s]);
+      for (let d = 0; d < a.length; d++) {
+        let l = a[d], u = l.v === i[s] ? l.v : l.w, c = u === l.v ? l.w : l.v;
+        t({ v: u, w: c }) < 0 && (o = true);
+      }
+      if (o) return we(e, n, t, r);
+    }
+    return F(e, n, t, r);
+  }
+  function w(e, n, t, r) {
+    let o = r;
+    for (; e.hasNode(o); ) o = j(r);
+    return t.dummy = n, e.setNode(o, t), o;
+  }
+  function xe(e) {
+    let n = new p().setGraph(e.graph());
+    return e.nodes().forEach((t) => n.setNode(t, e.node(t))), e.edges().forEach((t) => {
+      let r = n.edge(t.v, t.w) || { weight: 0, minlen: 1 }, o = e.edge(t);
+      n.setEdge(t.v, t.w, { weight: r.weight + o.weight, minlen: Math.max(r.minlen, o.minlen) });
+    }), n;
+  }
+  function A(e) {
+    let n = new p({ multigraph: e.isMultigraph() }).setGraph(e.graph());
+    return e.nodes().forEach((t) => {
+      e.children(t).length || n.setNode(t, e.node(t));
+    }), e.edges().forEach((t) => {
+      n.setEdge(t, e.edge(t));
+    }), n;
+  }
+  function H(e, n) {
+    let t = e.x, r = e.y, o = n.x - t, i = n.y - r, s = e.width / 2, a = e.height / 2;
+    if (!o && !i) throw new Error("Not possible to find intersection inside of the rectangle");
+    let d, l;
+    return Math.abs(i) * s > Math.abs(o) * a ? (i < 0 && (a = -a), d = a * o / i, l = a) : (o < 0 && (s = -s), d = s, l = s * i / o), { x: t + d, y: r + l };
+  }
+  function N(e) {
+    let n = k(X(e) + 1).map(() => []);
+    return e.nodes().forEach((t) => {
+      let r = e.node(t), o = r.rank;
+      o !== void 0 && (n[o] || (n[o] = []), n[o][r.order] = t);
+    }), n;
+  }
+  function Te(e) {
+    let n = e.nodes().map((r) => {
+      let o = e.node(r).rank;
+      return o === void 0 ? Number.MAX_VALUE : o;
+    }), t = L(Math.min, n);
+    e.nodes().forEach((r) => {
+      let o = e.node(r);
+      Object.hasOwn(o, "rank") && (o.rank -= t);
+    });
+  }
+  function Oe(e) {
+    let n = e.nodes().map((s) => e.node(s).rank).filter((s) => s !== void 0), t = L(Math.min, n), r = [];
+    e.nodes().forEach((s) => {
+      let a = e.node(s).rank - t;
+      r[a] || (r[a] = []), r[a].push(s);
+    });
+    let o = 0, i = e.graph().nodeRankFactor;
+    Array.from(r).forEach((s, a) => {
+      s === void 0 && a % i !== 0 ? --o : s !== void 0 && o && s.forEach((d) => e.node(d).rank += o);
+    });
+  }
+  function q(e, n, t, r) {
+    let o = { width: 0, height: 0 };
+    return arguments.length >= 4 && (o.rank = t, o.order = r), w(e, "border", o, n);
+  }
+  function Dn(e, n = Ie) {
+    let t = [];
+    for (let r = 0; r < e.length; r += n) {
+      let o = e.slice(r, r + n);
+      t.push(o);
+    }
+    return t;
+  }
+  var Ie = 65535;
+  function L(e, n) {
+    if (n.length > Ie) {
+      let t = Dn(n);
+      return e(...t.map((r) => e(...r)));
+    } else return e(...n);
+  }
+  function X(e) {
+    let t = e.nodes().map((r) => {
+      let o = e.node(r).rank;
+      return o === void 0 ? Number.MIN_VALUE : o;
+    });
+    return L(Math.max, t);
+  }
+  function Ce(e, n) {
+    let t = { lhs: [], rhs: [] };
+    return e.forEach((r) => {
+      n(r) ? t.lhs.push(r) : t.rhs.push(r);
+    }), t;
+  }
+  function P(e, n) {
+    let t = Date.now();
+    try {
+      return n();
+    } finally {
+      console.log(e + " time: " + (Date.now() - t) + "ms");
+    }
+  }
+  function M(e, n) {
+    return n();
+  }
+  var An = 0;
+  function j(e) {
+    let n = ++An;
+    return e + ("" + n);
+  }
+  function k(e, n, t = 1) {
+    n == null && (n = e, e = 0);
+    let r = (i) => i < n;
+    t < 0 && (r = (i) => n < i);
+    let o = [];
+    for (let i = e; r(i); i += t) o.push(i);
+    return o;
+  }
+  function T(e, n) {
+    let t = {};
+    for (let r of n) e[r] !== void 0 && (t[r] = e[r]);
+    return t;
+  }
+  function O(e, n) {
+    let t;
+    return typeof n == "string" ? t = (r) => r[n] : t = n, Object.entries(e).reduce((r, [o, i]) => (r[o] = t(i, o), r), {});
+  }
+  function Re(e, n) {
+    return e.reduce((t, r, o) => (t[r] = n[o], t), {});
+  }
+  var _ = "\0";
+  var K = class {
+    constructor() {
+      pe(this, "_sentinel");
+      let n = {};
+      n._next = n._prev = n, this._sentinel = n;
+    }
+    dequeue() {
+      let n = this._sentinel, t = n._prev;
+      if (t !== n) return Pe(t), t;
+    }
+    enqueue(n) {
+      let t = this._sentinel;
+      n._prev && n._next && Pe(n), n._next = t._next, t._next._prev = n, t._next = n, n._prev = t;
+    }
+    toString() {
+      let n = [], t = this._sentinel, r = t._prev;
+      for (; r !== t; ) n.push(JSON.stringify(r, Vn)), r = r._prev;
+      return "[" + n.join(", ") + "]";
+    }
+  };
+  function Pe(e) {
+    e._prev._next = e._next, e._next._prev = e._prev, delete e._next, delete e._prev;
+  }
+  function Vn(e, n) {
+    if (e !== "_next" && e !== "_prev") return n;
+  }
+  var Me = K;
+  var Wn = () => 1;
+  function Q(e, n) {
+    if (e.nodeCount() <= 1) return [];
+    let t = Yn(e, n || Wn);
+    return Bn(t.graph, t.buckets, t.zeroIdx).flatMap((o) => e.outEdges(o.v, o.w) || []);
+  }
+  function Bn(e, n, t) {
+    var a;
+    let r = [], o = n[n.length - 1], i = n[0], s;
+    for (; e.nodeCount(); ) {
+      for (; s = i.dequeue(); ) $(e, n, t, s);
+      for (; s = o.dequeue(); ) $(e, n, t, s);
+      if (e.nodeCount()) {
+        for (let d = n.length - 2; d > 0; --d) if (s = (a = n[d]) == null ? void 0 : a.dequeue(), s) {
+          r = r.concat($(e, n, t, s, true) || []);
+          break;
+        }
+      }
+    }
+    return r;
+  }
+  function $(e, n, t, r, o) {
+    let i = [], s = o ? i : void 0;
+    return (e.inEdges(r.v) || []).forEach((a) => {
+      let d = e.edge(a), l = e.node(a.v);
+      o && i.push({ v: a.v, w: a.w }), l.out -= d, J(n, t, l);
+    }), (e.outEdges(r.v) || []).forEach((a) => {
+      let d = e.edge(a), l = a.w, u = e.node(l);
+      u.in -= d, J(n, t, u);
+    }), e.removeNode(r.v), s;
+  }
+  function Yn(e, n) {
+    let t = new p(), r = 0, o = 0;
+    e.nodes().forEach((a) => {
+      t.setNode(a, { v: a, in: 0, out: 0 });
+    }), e.edges().forEach((a) => {
+      let d = t.edge(a.v, a.w) || 0, l = n(a), u = d + l;
+      t.setEdge(a.v, a.w, u);
+      let c = t.node(a.v), h = t.node(a.w);
+      o = Math.max(o, c.out += l), r = Math.max(r, h.in += l);
+    });
+    let i = zn(o + r + 3).map(() => new Me()), s = r + 1;
+    return t.nodes().forEach((a) => {
+      J(i, s, t.node(a));
+    }), { graph: t, buckets: i, zeroIdx: s };
+  }
+  function J(e, n, t) {
+    var r, o, i;
+    t.out ? t.in ? (i = e[t.out - t.in + n]) == null || i.enqueue(t) : (o = e[e.length - 1]) == null || o.enqueue(t) : (r = e[0]) == null || r.enqueue(t);
+  }
+  function zn(e) {
+    let n = [];
+    for (let t = 0; t < e; t++) n.push(t);
+    return n;
+  }
+  function je(e) {
+    (e.graph().acyclicer === "greedy" ? Q(e, t(e)) : Hn(e)).forEach((r) => {
+      let o = e.edge(r);
+      e.removeEdge(r), o.forwardName = r.name, o.reversed = true, e.setEdge(r.w, r.v, o, j("rev"));
+    });
+    function t(r) {
+      return (o) => r.edge(o).weight;
+    }
+  }
+  function Hn(e) {
+    let n = [], t = {}, r = {};
+    function o(i) {
+      Object.hasOwn(r, i) || (r[i] = true, t[i] = true, e.outEdges(i).forEach((s) => {
+        Object.hasOwn(t, s.w) ? n.push(s) : o(s.w);
+      }), delete t[i]);
+    }
+    return e.nodes().forEach(o), n;
+  }
+  function Se(e) {
+    e.edges().forEach((n) => {
+      let t = e.edge(n);
+      if (t.reversed) {
+        e.removeEdge(n);
+        let r = t.forwardName;
+        delete t.reversed, delete t.forwardName, e.setEdge(n.w, n.v, t, r);
+      }
+    });
+  }
+  function Fe(e) {
+    e.graph().dummyChains = [], e.edges().forEach((n) => Xn(e, n));
+  }
+  function Xn(e, n) {
+    let t = n.v, r = e.node(t).rank, o = n.w, i = e.node(o).rank, s = n.name, a = e.edge(n), d = a.labelRank;
+    if (i === r + 1) return;
+    e.removeEdge(n);
+    let l, u, c;
+    for (c = 0, ++r; r < i; ++c, ++r) a.points = [], u = { width: 0, height: 0, edgeLabel: a, edgeObj: n, rank: r }, l = w(e, "edge", u, "_d"), r === d && (u.width = a.width, u.height = a.height, u.dummy = "edge-label", u.labelpos = a.labelpos), e.setEdge(t, l, { weight: a.weight }, s), c === 0 && e.graph().dummyChains.push(l), t = l;
+    e.setEdge(t, o, { weight: a.weight }, s);
+  }
+  function De(e) {
+    e.graph().dummyChains.forEach((n) => {
+      let t = e.node(n), r = t.edgeLabel, o;
+      for (e.setEdge(t.edgeObj, r); t.dummy; ) o = e.successors(n)[0], e.removeNode(n), r.points.push({ x: t.x, y: t.y }), t.dummy === "edge-label" && (r.x = t.x, r.y = t.y, r.width = t.width, r.height = t.height), n = o, t = e.node(n);
+    });
+  }
+  function S(e) {
+    let n = {};
+    function t(r) {
+      let o = e.node(r);
+      if (Object.hasOwn(n, r)) return o.rank;
+      n[r] = true;
+      let i = e.outEdges(r), s = i ? i.map((d) => d == null ? Number.POSITIVE_INFINITY : t(d.w) - e.edge(d).minlen) : [], a = L(Math.min, s);
+      return a === Number.POSITIVE_INFINITY && (a = 0), o.rank = a;
+    }
+    e.sources().forEach(t);
+  }
+  function v(e, n) {
+    return e.node(n.w).rank - e.node(n.v).rank - e.edge(n).minlen;
+  }
+  var V = Kn;
+  function Kn(e) {
+    let n = new p({ directed: false }), t = e.nodes();
+    if (t.length === 0) throw new Error("Graph must have at least one node");
+    let r = t[0], o = e.nodeCount();
+    n.setNode(r, {});
+    let i, s;
+    for (; $n(n, e) < o && (i = Jn(n, e), !!i); ) s = n.hasNode(i.v) ? v(e, i) : -v(e, i), Qn(n, e, s);
+    return n;
+  }
+  function $n(e, n) {
+    function t(r) {
+      let o = n.nodeEdges(r);
+      o && o.forEach((i) => {
+        let s = i.v, a = r === s ? i.w : s;
+        !e.hasNode(a) && !v(n, i) && (e.setNode(a, {}), e.setEdge(r, a, {}), t(a));
+      });
+    }
+    return e.nodes().forEach(t), e.nodeCount();
+  }
+  function Jn(e, n) {
+    return n.edges().reduce((r, o) => {
+      let i = Number.POSITIVE_INFINITY;
+      return e.hasNode(o.v) !== e.hasNode(o.w) && (i = v(n, o)), i < r[0] ? [i, o] : r;
+    }, [Number.POSITIVE_INFINITY, null])[1];
+  }
+  function Qn(e, n, t) {
+    e.nodes().forEach((r) => n.node(r).rank += t);
+  }
+  var { preorder: Zn, postorder: et } = R;
+  var Ve = x;
+  x.initLowLimValues = ee;
+  x.initCutValues = Z;
+  x.calcCutValue = We;
+  x.leaveEdge = Ye;
+  x.enterEdge = ze;
+  x.exchangeEdges = He;
+  function x(e) {
+    e = xe(e), S(e);
+    let n = V(e);
+    ee(n), Z(n, e);
+    let t, r;
+    for (; t = Ye(n); ) r = ze(n, e, t), He(n, e, t, r);
+  }
+  function Z(e, n) {
+    let t = et(e, e.nodes());
+    t = t.slice(0, t.length - 1), t.forEach((r) => nt(e, n, r));
+  }
+  function nt(e, n, t) {
+    let o = e.node(t).parent, i = e.edge(t, o);
+    i.cutvalue = We(e, n, t);
+  }
+  function We(e, n, t) {
+    let o = e.node(t).parent, i = true, s = n.edge(t, o), a = 0;
+    s || (i = false, s = n.edge(o, t)), a = s.weight;
+    let d = n.nodeEdges(t);
+    return d && d.forEach((l) => {
+      let u = l.v === t, c = u ? l.w : l.v;
+      if (c !== o) {
+        let h = u === i, f = n.edge(l).weight;
+        if (a += h ? f : -f, rt(e, t, c)) {
+          let b = e.edge(t, c).cutvalue;
+          a += h ? -b : b;
+        }
+      }
+    }), a;
+  }
+  function ee(e, n) {
+    arguments.length < 2 && (n = e.nodes()[0]), Be(e, {}, 1, n);
+  }
+  function Be(e, n, t, r, o) {
+    let i = t, s = e.node(r);
+    n[r] = true;
+    let a = e.neighbors(r);
+    return a && a.forEach((d) => {
+      Object.hasOwn(n, d) || (t = Be(e, n, t, d, r));
+    }), s.low = i, s.lim = t++, o ? s.parent = o : delete s.parent, t;
+  }
+  function Ye(e) {
+    return e.edges().find((n) => e.edge(n).cutvalue < 0);
+  }
+  function ze(e, n, t) {
+    let r = t.v, o = t.w;
+    n.hasEdge(r, o) || (r = t.w, o = t.v);
+    let i = e.node(r), s = e.node(o), a = i, d = false;
+    return i.lim > s.lim && (a = s, d = true), n.edges().filter((u) => d === Ae(e, e.node(u.v), a) && d !== Ae(e, e.node(u.w), a)).reduce((u, c) => v(n, c) < v(n, u) ? c : u);
+  }
+  function He(e, n, t, r) {
+    let o = t.v, i = t.w;
+    e.removeEdge(o, i), e.setEdge(r.v, r.w, {}), ee(e), Z(e, n), tt(e, n);
+  }
+  function tt(e, n) {
+    let t = e.nodes().find((o) => !e.node(o).parent);
+    if (!t) return;
+    let r = Zn(e, [t]);
+    r = r.slice(1), r.forEach((o) => {
+      let s = e.node(o).parent, a = n.edge(o, s), d = false;
+      a || (a = n.edge(s, o), d = true), n.node(o).rank = n.node(s).rank + (d ? a.minlen : -a.minlen);
+    });
+  }
+  function rt(e, n, t) {
+    return e.hasEdge(n, t);
+  }
+  function Ae(e, n, t) {
+    return t.low <= n.lim && n.lim <= t.lim;
+  }
+  var Xe = ot;
+  function ot(e) {
+    let n = e.graph().ranker;
+    if (typeof n == "function") return n(e);
+    switch (n) {
+      case "network-simplex":
+        qe(e);
+        break;
+      case "tight-tree":
+        st(e);
+        break;
+      case "longest-path":
+        it(e);
+        break;
+      case "none":
+        break;
+      default:
+        qe(e);
+    }
+  }
+  var it = S;
+  function st(e) {
+    S(e), V(e);
+  }
+  function qe(e) {
+    Ve(e);
+  }
+  var Ue = at;
+  function at(e) {
+    let n = lt(e);
+    e.graph().dummyChains.forEach((t) => {
+      let r = e.node(t), o = r.edgeObj, i = dt(e, n, o.v, o.w), s = i.path, a = i.lca, d = 0, l = s[d], u = true;
+      for (; t !== o.w; ) {
+        if (r = e.node(t), u) {
+          for (; (l = s[d]) !== a && e.node(l).maxRank < r.rank; ) d++;
+          l === a && (u = false);
+        }
+        if (!u) {
+          for (; d < s.length - 1 && e.node(s[d + 1]).minRank <= r.rank; ) d++;
+          l = s[d];
+        }
+        l !== void 0 && e.setParent(t, l), t = e.successors(t)[0];
+      }
+    });
+  }
+  function dt(e, n, t, r) {
+    let o = [], i = [], s = Math.min(n[t].low, n[r].low), a = Math.max(n[t].lim, n[r].lim), d;
+    d = t;
+    do
+      d = e.parent(d), o.push(d);
+    while (d && (n[d].low > s || a > n[d].lim));
+    let l = d, u = r;
+    for (; (u = e.parent(u)) !== l; ) i.push(u);
+    return { path: o.concat(i.reverse()), lca: l };
+  }
+  function lt(e) {
+    let n = {}, t = 0;
+    function r(o) {
+      let i = t;
+      e.children(o).forEach(r), n[o] = { low: i, lim: t++ };
+    }
+    return e.children(_).forEach(r), n;
+  }
+  function Ke(e) {
+    let n = w(e, "root", {}, "_root"), t = ut(e), r = Object.values(t), o = L(Math.max, r) - 1, i = 2 * o + 1;
+    e.graph().nestingRoot = n, e.edges().forEach((a) => e.edge(a).minlen *= i);
+    let s = ct(e) + 1;
+    e.children(_).forEach((a) => $e(e, n, i, s, o, t, a)), e.graph().nodeRankFactor = i;
+  }
+  function $e(e, n, t, r, o, i, s) {
+    var c;
+    let a = e.children(s);
+    if (!a.length) {
+      s !== n && e.setEdge(n, s, { weight: 0, minlen: t });
+      return;
+    }
+    let d = q(e, "_bt"), l = q(e, "_bb"), u = e.node(s);
+    e.setParent(d, s), u.borderTop = d, e.setParent(l, s), u.borderBottom = l, a.forEach((h) => {
+      var y;
+      $e(e, n, t, r, o, i, h);
+      let f = e.node(h), g = f.borderTop ? f.borderTop : h, b = f.borderBottom ? f.borderBottom : h, m = f.borderTop ? r : 2 * r, E = g !== b ? 1 : o - ((y = i[s]) != null ? y : 0) + 1;
+      e.setEdge(d, g, { weight: m, minlen: E, nestingEdge: true }), e.setEdge(b, l, { weight: m, minlen: E, nestingEdge: true });
+    }), e.parent(s) || e.setEdge(n, d, { weight: 0, minlen: o + ((c = i[s]) != null ? c : 0) });
+  }
+  function ut(e) {
+    let n = {};
+    function t(r, o) {
+      let i = e.children(r);
+      i && i.length && i.forEach((s) => t(s, o + 1)), n[r] = o;
+    }
+    return e.children(_).forEach((r) => t(r, 1)), n;
+  }
+  function ct(e) {
+    return e.edges().reduce((n, t) => n + e.edge(t).weight, 0);
+  }
+  function Je(e) {
+    let n = e.graph();
+    e.removeNode(n.nestingRoot), delete n.nestingRoot, e.edges().forEach((t) => {
+      e.edge(t).nestingEdge && e.removeEdge(t);
+    });
+  }
+  var Ze = ft;
+  function ft(e) {
+    function n(t) {
+      let r = e.children(t), o = e.node(t);
+      if (r.length && r.forEach(n), Object.hasOwn(o, "minRank")) {
+        o.borderLeft = [], o.borderRight = [];
+        for (let i = o.minRank, s = o.maxRank + 1; i < s; ++i) Qe(e, "borderLeft", "_bl", t, o, i), Qe(e, "borderRight", "_br", t, o, i);
+      }
+    }
+    e.children(_).forEach(n);
+  }
+  function Qe(e, n, t, r, o, i) {
+    let s = { width: 0, height: 0, rank: i, borderType: n }, a = o[n][i - 1], d = w(e, "border", s, t);
+    o[n][i] = d, e.setParent(d, r), a && e.setEdge(a, d, { weight: 1 });
+  }
+  function nn(e) {
+    var t;
+    let n = (t = e.graph().rankdir) == null ? void 0 : t.toLowerCase();
+    (n === "lr" || n === "rl") && rn(e);
+  }
+  function tn(e) {
+    var t;
+    let n = (t = e.graph().rankdir) == null ? void 0 : t.toLowerCase();
+    (n === "bt" || n === "rl") && bt(e), (n === "lr" || n === "rl") && (gt(e), rn(e));
+  }
+  function rn(e) {
+    e.nodes().forEach((n) => en(e.node(n))), e.edges().forEach((n) => en(e.edge(n)));
+  }
+  function en(e) {
+    let n = e.width;
+    e.width = e.height, e.height = n;
+  }
+  function bt(e) {
+    e.nodes().forEach((n) => ne(e.node(n))), e.edges().forEach((n) => {
+      var r;
+      let t = e.edge(n);
+      (r = t.points) == null || r.forEach(ne), Object.hasOwn(t, "y") && ne(t);
+    });
+  }
+  function ne(e) {
+    e.y = -e.y;
+  }
+  function gt(e) {
+    e.nodes().forEach((n) => te(e.node(n))), e.edges().forEach((n) => {
+      var r;
+      let t = e.edge(n);
+      (r = t.points) == null || r.forEach(te), Object.hasOwn(t, "x") && te(t);
+    });
+  }
+  function te(e) {
+    let n = e.x;
+    e.x = e.y, e.y = n;
+  }
+  function re(e) {
+    let n = {}, t = e.nodes().filter((d) => !e.children(d).length), r = t.map((d) => e.node(d).rank), o = L(Math.max, r), i = k(o + 1).map(() => []);
+    function s(d) {
+      if (n[d]) return;
+      n[d] = true;
+      let l = e.node(d);
+      i[l.rank].push(d);
+      let u = e.successors(d);
+      u && u.forEach(s);
+    }
+    return t.sort((d, l) => e.node(d).rank - e.node(l).rank).forEach(s), i;
+  }
+  function oe(e, n) {
+    let t = 0;
+    for (let r = 1; r < n.length; ++r) t += mt(e, n[r - 1], n[r]);
+    return t;
+  }
+  function mt(e, n, t) {
+    let r = Re(t, t.map((l, u) => u)), o = n.flatMap((l) => {
+      let u = e.outEdges(l);
+      return u ? u.map((c) => ({ pos: r[c.w], weight: e.edge(c).weight })).sort((c, h) => c.pos - h.pos) : [];
+    }), i = 1;
+    for (; i < t.length; ) i <<= 1;
+    let s = 2 * i - 1;
+    i -= 1;
+    let a = new Array(s).fill(0), d = 0;
+    return o.forEach((l) => {
+      let u = l.pos + i;
+      a[u] += l.weight;
+      let c = 0;
+      for (; u > 0; ) u % 2 && (c += a[u + 1]), u = u - 1 >> 1, a[u] += l.weight;
+      d += l.weight * c;
+    }), d;
+  }
+  function ie(e, n = []) {
+    return n.map((t) => {
+      let r = e.inEdges(t);
+      if (!r || !r.length) return { v: t };
+      {
+        let o = r.reduce((i, s) => {
+          let a = e.edge(s), d = e.node(s.v);
+          return { sum: i.sum + a.weight * d.order, weight: i.weight + a.weight };
+        }, { sum: 0, weight: 0 });
+        return { v: t, barycenter: o.sum / o.weight, weight: o.weight };
+      }
+    });
+  }
+  function se(e, n) {
+    let t = {};
+    e.forEach((o, i) => {
+      let s = { indegree: 0, in: [], out: [], vs: [o.v], i };
+      o.barycenter !== void 0 && (s.barycenter = o.barycenter, s.weight = o.weight), t[o.v] = s;
+    }), n.edges().forEach((o) => {
+      let i = t[o.v], s = t[o.w];
+      i !== void 0 && s !== void 0 && (s.indegree++, i.out.push(s));
+    });
+    let r = Object.values(t).filter((o) => !o.indegree);
+    return Et(r);
+  }
+  function Et(e) {
+    let n = [];
+    function t(o) {
+      return (i) => {
+        i.merged || (i.barycenter === void 0 || o.barycenter === void 0 || i.barycenter >= o.barycenter) && Lt(o, i);
+      };
+    }
+    function r(o) {
+      return (i) => {
+        i.in.push(o), --i.indegree === 0 && e.push(i);
+      };
+    }
+    for (; e.length; ) {
+      let o = e.pop();
+      n.push(o), o.in.reverse().forEach(t(o)), o.out.forEach(r(o));
+    }
+    return n.filter((o) => !o.merged).map((o) => T(o, ["vs", "i", "barycenter", "weight"]));
+  }
+  function Lt(e, n) {
+    let t = 0, r = 0;
+    e.weight && (t += e.barycenter * e.weight, r += e.weight), n.weight && (t += n.barycenter * n.weight, r += n.weight), e.vs = n.vs.concat(e.vs), e.barycenter = t / r, e.weight = r, e.i = Math.min(n.i, e.i), n.merged = true;
+  }
+  function ae(e, n) {
+    let t = Ce(e, (u) => Object.hasOwn(u, "barycenter")), r = t.lhs, o = t.rhs.sort((u, c) => c.i - u.i), i = [], s = 0, a = 0, d = 0;
+    r.sort(yt(!!n)), d = on(i, o, d), r.forEach((u) => {
+      d += u.vs.length, i.push(u.vs), s += u.barycenter * u.weight, a += u.weight, d = on(i, o, d);
+    });
+    let l = { vs: i.flat(1) };
+    return a && (l.barycenter = s / a, l.weight = a), l;
+  }
+  function on(e, n, t) {
+    let r;
+    for (; n.length && (r = n[n.length - 1]).i <= t; ) n.pop(), e.push(r.vs), t++;
+    return t;
+  }
+  function yt(e) {
+    return (n, t) => n.barycenter < t.barycenter ? -1 : n.barycenter > t.barycenter ? 1 : e ? t.i - n.i : n.i - t.i;
+  }
+  function W(e, n, t, r) {
+    let o = e.children(n), i = e.node(n), s = i ? i.borderLeft : void 0, a = i ? i.borderRight : void 0, d = {};
+    s && (o = o.filter((h) => h !== s && h !== a));
+    let l = ie(e, o);
+    l.forEach((h) => {
+      if (e.children(h.v).length) {
+        let f = W(e, h.v, t, r);
+        d[h.v] = f, Object.hasOwn(f, "barycenter") && Nt(h, f);
+      }
+    });
+    let u = se(l, t);
+    wt(u, d);
+    let c = ae(u, r);
+    if (s && a) {
+      c.vs = [s, c.vs, a].flat(1);
+      let h = e.predecessors(s);
+      if (h && h.length) {
+        let f = e.node(h[0]), g = e.predecessors(a), b = e.node(g[0]);
+        Object.hasOwn(c, "barycenter") || (c.barycenter = 0, c.weight = 0), c.barycenter = (c.barycenter * c.weight + f.order + b.order) / (c.weight + 2), c.weight += 2;
+      }
+    }
+    return c;
+  }
+  function wt(e, n) {
+    e.forEach((t) => {
+      t.vs = t.vs.flatMap((r) => n[r] ? n[r].vs : r);
+    });
+  }
+  function Nt(e, n) {
+    e.barycenter !== void 0 ? (e.barycenter = (e.barycenter * e.weight + n.barycenter * n.weight) / (e.weight + n.weight), e.weight += n.weight) : (e.barycenter = n.barycenter, e.weight = n.weight);
+  }
+  function de(e, n, t, r) {
+    r || (r = e.nodes());
+    let o = Gt(e), i = new p({ compound: true }).setGraph({ root: o }).setDefaultNodeLabel((s) => e.node(s));
+    return r.forEach((s) => {
+      let a = e.node(s), d = e.parent(s);
+      if (a.rank === n || a.minRank <= n && n <= a.maxRank) {
+        i.setNode(s), i.setParent(s, d || o);
+        let l = e[t](s);
+        l && l.forEach((u) => {
+          let c = u.v === s ? u.w : u.v, h = i.edge(c, s), f = h !== void 0 ? h.weight : 0;
+          i.setEdge(c, s, { weight: e.edge(u).weight + f });
+        }), Object.hasOwn(a, "minRank") && i.setNode(s, { borderLeft: a.borderLeft[n], borderRight: a.borderRight[n] });
+      }
+    }), i;
+  }
+  function Gt(e) {
+    let n;
+    for (; e.hasNode(n = j("_root")); ) ;
+    return n;
+  }
+  function le(e, n, t) {
+    let r = {}, o;
+    t.forEach((i) => {
+      let s = e.parent(i), a, d;
+      for (; s; ) {
+        if (a = e.parent(s), a ? (d = r[a], r[a] = s) : (d = o, o = s), d && d !== s) {
+          n.setEdge(d, s);
+          return;
+        }
+        s = a;
+      }
+    });
+  }
+  function B(e, n = {}) {
+    if (typeof n.customOrder == "function") {
+      n.customOrder(e, B);
+      return;
+    }
+    let t = X(e), r = sn(e, k(1, t + 1), "inEdges"), o = sn(e, k(t - 1, -1, -1), "outEdges"), i = re(e);
+    if (an(e, i), n.disableOptimalOrderHeuristic) return;
+    let s = Number.POSITIVE_INFINITY, a, d = n.constraints || [];
+    for (let l = 0, u = 0; u < 4; ++l, ++u) {
+      kt(l % 2 ? r : o, l % 4 >= 2, d), i = N(e);
+      let c = oe(e, i);
+      c < s ? (u = 0, a = Object.assign({}, i), s = c) : c === s && (a = structuredClone(i));
+    }
+    an(e, a);
+  }
+  function sn(e, n, t) {
+    let r = /* @__PURE__ */ new Map(), o = (i, s) => {
+      r.has(i) || r.set(i, []), r.get(i).push(s);
+    };
+    for (let i of e.nodes()) {
+      let s = e.node(i);
+      if (typeof s.rank == "number" && o(s.rank, i), typeof s.minRank == "number" && typeof s.maxRank == "number") for (let a = s.minRank; a <= s.maxRank; a++) a !== s.rank && o(a, i);
+    }
+    return n.map(function(i) {
+      return de(e, i, t, r.get(i) || []);
+    });
+  }
+  function kt(e, n, t) {
+    let r = new p();
+    e.forEach(function(o) {
+      t.forEach((a) => r.setEdge(a.left, a.right));
+      let i = o.graph().root, s = W(o, i, r, n);
+      s.vs.forEach((a, d) => o.node(a).order = d), le(o, r, s.vs);
+    });
+  }
+  function an(e, n) {
+    Object.values(n).forEach((t) => t.forEach((r, o) => e.node(r).order = o));
+  }
+  function vt(e, n) {
+    let t = {};
+    function r(o, i) {
+      let s = 0, a = 0, d = o.length, l = i[i.length - 1];
+      return i.forEach((u, c) => {
+        let h = xt(e, u), f = h ? e.node(h).order : d;
+        (h || u === l) && (i.slice(a, c + 1).forEach((g) => {
+          let b = e.predecessors(g);
+          b && b.forEach((m) => {
+            let E = e.node(m), y = E.order;
+            (y < s || f < y) && !(E.dummy && e.node(g).dummy) && dn(t, m, g);
+          });
+        }), a = c + 1, s = f);
+      }), i;
+    }
+    return n.length && n.reduce(r), t;
+  }
+  function _t(e, n) {
+    let t = {};
+    function r(i, s, a, d, l) {
+      k(s, a).forEach((u) => {
+        let c = i[u];
+        if (c !== void 0 && e.node(c).dummy) {
+          let h = e.predecessors(c);
+          h && h.forEach((f) => {
+            if (f === void 0) return;
+            let g = e.node(f);
+            g.dummy && (g.order < d || g.order > l) && dn(t, f, c);
+          });
+        }
+      });
+    }
+    function o(i, s) {
+      let a = -1, d = -1, l = 0;
+      return s.forEach((u, c) => {
+        if (e.node(u).dummy === "border") {
+          let h = e.predecessors(u);
+          if (h && h.length) {
+            let f = h[0];
+            if (f === void 0) return;
+            d = e.node(f).order, r(s, l, c, a, d), l = c, a = d;
+          }
+        }
+        r(s, l, s.length, d, i.length);
+      }), s;
+    }
+    return n.length && n.reduce(o), t;
+  }
+  function xt(e, n) {
+    if (e.node(n).dummy) {
+      let t = e.predecessors(n);
+      if (t) return t.find((r) => e.node(r).dummy);
+    }
+  }
+  function dn(e, n, t) {
+    if (n > t) {
+      let o = n;
+      n = t, t = o;
+    }
+    let r = e[n];
+    r || (e[n] = r = {}), r[t] = true;
+  }
+  function Tt(e, n, t) {
+    if (n > t) {
+      let o = n;
+      n = t, t = o;
+    }
+    let r = e[n];
+    return r !== void 0 && Object.hasOwn(r, t);
+  }
+  function Ot(e, n, t, r) {
+    let o = {}, i = {}, s = {};
+    return n.forEach((a) => {
+      a.forEach((d, l) => {
+        o[d] = d, i[d] = d, s[d] = l;
+      });
+    }), n.forEach((a) => {
+      let d = -1;
+      a.forEach((l) => {
+        let u = r(l);
+        if (u && u.length) {
+          let c = u.sort((f, g) => {
+            let b = s[f], m = s[g];
+            return (b !== void 0 ? b : 0) - (m !== void 0 ? m : 0);
+          }), h = (c.length - 1) / 2;
+          for (let f = Math.floor(h), g = Math.ceil(h); f <= g; ++f) {
+            let b = c[f];
+            if (b === void 0) continue;
+            let m = s[b];
+            if (m !== void 0 && i[l] === l && d < m && !Tt(t, l, b)) {
+              let E = o[b];
+              E !== void 0 && (i[b] = l, i[l] = o[l] = E, d = m);
+            }
+          }
+        }
+      });
+    }), { root: o, align: i };
+  }
+  function It(e, n, t, r, o = false) {
+    let i = {}, s = Ct(e, n, t, o), a = o ? "borderLeft" : "borderRight";
+    function d(f, g) {
+      let b = s.nodes().slice(), m = {}, E = b.pop();
+      for (; E; ) {
+        if (m[E]) f(E);
+        else {
+          m[E] = true, b.push(E);
+          for (let y of g(E)) b.push(y);
+        }
+        E = b.pop();
+      }
+    }
+    function l(f) {
+      let g = s.inEdges(f);
+      g ? i[f] = g.reduce((b, m) => {
+        var I;
+        let E = (I = i[m.v]) != null ? I : 0, y = s.edge(m);
+        return Math.max(b, E + (y !== void 0 ? y : 0));
+      }, 0) : i[f] = 0;
+    }
+    function u(f) {
+      let g = s.outEdges(f), b = Number.POSITIVE_INFINITY;
+      g && (b = g.reduce((E, y) => {
+        let I = i[y.w], be = s.edge(y);
+        return Math.min(E, (I !== void 0 ? I : 0) - (be !== void 0 ? be : 0));
+      }, Number.POSITIVE_INFINITY));
+      let m = e.node(f);
+      b !== Number.POSITIVE_INFINITY && m.borderType !== a && (i[f] = Math.max(i[f] !== void 0 ? i[f] : 0, b));
+    }
+    function c(f) {
+      return s.predecessors(f) || [];
+    }
+    function h(f) {
+      return s.successors(f) || [];
+    }
+    return d(l, c), d(u, h), Object.keys(r).forEach((f) => {
+      var b;
+      let g = t[f];
+      g !== void 0 && (i[f] = (b = i[g]) != null ? b : 0);
+    }), i;
+  }
+  function Ct(e, n, t, r) {
+    let o = new p(), i = e.graph(), s = jt(i.nodesep, i.edgesep, r);
+    return n.forEach((a) => {
+      let d;
+      a.forEach((l) => {
+        let u = t[l];
+        if (u !== void 0) {
+          if (o.setNode(u), d !== void 0) {
+            let c = t[d];
+            if (c !== void 0) {
+              let h = o.edge(c, u);
+              o.setEdge(c, u, Math.max(s(e, l, d), h || 0));
+            }
+          }
+          d = l;
+        }
+      });
+    }), o;
+  }
+  function Rt(e, n) {
+    return Object.values(n).reduce((t, r) => {
+      let o = Number.NEGATIVE_INFINITY, i = Number.POSITIVE_INFINITY;
+      Object.entries(r).forEach(([a, d]) => {
+        let l = St(e, a) / 2;
+        o = Math.max(d + l, o), i = Math.min(d - l, i);
+      });
+      let s = o - i;
+      return s < t[0] && (t = [s, r]), t;
+    }, [Number.POSITIVE_INFINITY, null])[1];
+  }
+  function Pt(e, n) {
+    let t = Object.values(n), r = L(Math.min, t), o = L(Math.max, t);
+    ["u", "d"].forEach((i) => {
+      ["l", "r"].forEach((s) => {
+        let a = i + s, d = e[a];
+        if (!d || d === n) return;
+        let l = Object.values(d), u = r - L(Math.min, l);
+        s !== "l" && (u = o - L(Math.max, l)), u && (e[a] = O(d, (c) => c + u));
+      });
+    });
+  }
+  function Mt(e, n = void 0) {
+    let t = e.ul;
+    return t ? O(t, (r, o) => {
+      var s, a;
+      if (n) {
+        let d = n.toLowerCase(), l = e[d];
+        if (l && l[o] !== void 0) return l[o];
+      }
+      let i = Object.values(e).map((d) => {
+        let l = d[o];
+        return l !== void 0 ? l : 0;
+      }).sort((d, l) => d - l);
+      return (((s = i[1]) != null ? s : 0) + ((a = i[2]) != null ? a : 0)) / 2;
+    }) : {};
+  }
+  function ln(e) {
+    let n = N(e), t = Object.assign(vt(e, n), _t(e, n)), r = {}, o;
+    ["u", "d"].forEach((s) => {
+      o = s === "u" ? n : Object.values(n).reverse(), ["l", "r"].forEach((a) => {
+        a === "r" && (o = o.map((c) => Object.values(c).reverse()));
+        let l = Ot(e, o, t, (c) => (s === "u" ? e.predecessors(c) : e.successors(c)) || []), u = It(e, o, l.root, l.align, a === "r");
+        a === "r" && (u = O(u, (c) => -c)), r[s + a] = u;
+      });
+    });
+    let i = Rt(e, r);
+    return Pt(r, i), Mt(r, e.graph().align);
+  }
+  function jt(e, n, t) {
+    return (r, o, i) => {
+      let s = r.node(o), a = r.node(i), d = 0, l;
+      if (d += s.width / 2, Object.hasOwn(s, "labelpos")) switch (s.labelpos.toLowerCase()) {
+        case "l":
+          l = -s.width / 2;
+          break;
+        case "r":
+          l = s.width / 2;
+          break;
+      }
+      if (l && (d += t ? l : -l), l = void 0, d += (s.dummy ? n : e) / 2, d += (a.dummy ? n : e) / 2, d += a.width / 2, Object.hasOwn(a, "labelpos")) switch (a.labelpos.toLowerCase()) {
+        case "l":
+          l = a.width / 2;
+          break;
+        case "r":
+          l = -a.width / 2;
+          break;
+      }
+      return l && (d += t ? l : -l), d;
+    };
+  }
+  function St(e, n) {
+    return e.node(n).width;
+  }
+  function un(e) {
+    e = A(e), Ft(e), Object.entries(ln(e)).forEach(([n, t]) => e.node(n).x = t);
+  }
+  function Ft(e) {
+    let n = N(e), t = e.graph(), r = t.ranksep, o = t.rankalign, i = 0;
+    n.forEach((s) => {
+      let a = s.reduce((d, l) => {
+        var c;
+        let u = (c = e.node(l).height) != null ? c : 0;
+        return d > u ? d : u;
+      }, 0);
+      s.forEach((d) => {
+        let l = e.node(d);
+        o === "top" ? l.y = i + l.height / 2 : o === "bottom" ? l.y = i + a - l.height / 2 : l.y = i + a / 2;
+      }), i += a + r;
+    });
+  }
+  function he(e, n = {}) {
+    let t = n.debugTiming ? P : M;
+    return t("layout", () => {
+      let r = t("  buildLayoutGraph", () => Xt(e));
+      return t("  runLayout", () => Dt(r, t, n)), t("  updateInputGraph", () => At(e, r)), r;
+    });
+  }
+  function Dt(e, n, t) {
+    n("    makeSpaceForEdgeLabels", () => Ut(e)), n("    removeSelfEdges", () => rr(e)), n("    acyclic", () => je(e)), n("    nestingGraph.run", () => Ke(e)), n("    rank", () => Xe(A(e))), n("    injectEdgeLabelProxies", () => Kt(e)), n("    removeEmptyRanks", () => Oe(e)), n("    nestingGraph.cleanup", () => Je(e)), n("    normalizeRanks", () => Te(e)), n("    assignRankMinMax", () => $t(e)), n("    removeEdgeLabelProxies", () => Jt(e)), n("    normalize.run", () => Fe(e)), n("    parentDummyChains", () => Ue(e)), n("    addBorderSegments", () => Ze(e)), n("    order", () => B(e, t)), n("    insertSelfEdges", () => or(e)), n("    adjustCoordinateSystem", () => nn(e)), n("    position", () => un(e)), n("    positionSelfEdges", () => ir(e)), n("    removeBorderNodes", () => tr(e)), n("    normalize.undo", () => De(e)), n("    fixupEdgeLabelCoords", () => er(e)), n("    undoCoordinateSystem", () => tn(e)), n("    translateGraph", () => Qt(e)), n("    assignNodeIntersects", () => Zt(e)), n("    reversePoints", () => nr(e)), n("    acyclic.undo", () => Se(e));
+  }
+  function At(e, n) {
+    e.nodes().forEach((t) => {
+      let r = e.node(t), o = n.node(t);
+      r && (r.x = o.x, r.y = o.y, r.order = o.order, r.rank = o.rank, n.children(t).length && (r.width = o.width, r.height = o.height));
+    }), e.edges().forEach((t) => {
+      let r = e.edge(t), o = n.edge(t);
+      r.points = o.points, Object.hasOwn(o, "x") && (r.x = o.x, r.y = o.y);
+    }), e.graph().width = n.graph().width, e.graph().height = n.graph().height;
+  }
+  var Vt = ["nodesep", "edgesep", "ranksep", "marginx", "marginy"];
+  var Wt = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "TB", rankalign: "center" };
+  var Bt = ["acyclicer", "ranker", "rankdir", "align", "rankalign"];
+  var Yt = ["width", "height", "rank"];
+  var cn = { width: 0, height: 0 };
+  var zt = ["minlen", "weight", "width", "height", "labeloffset"];
+  var Ht = { minlen: 1, weight: 1, width: 0, height: 0, labeloffset: 10, labelpos: "r" };
+  var qt = ["labelpos"];
+  function Xt(e) {
+    let n = new p({ multigraph: true, compound: true }), t = ce(e.graph());
+    return n.setGraph(Object.assign({}, Wt, ue(t, Vt), T(t, Bt))), e.nodes().forEach((r) => {
+      let o = ce(e.node(r)), i = ue(o, Yt);
+      Object.keys(cn).forEach((a) => {
+        i[a] === void 0 && (i[a] = cn[a]);
+      }), n.setNode(r, i);
+      let s = e.parent(r);
+      s !== void 0 && n.setParent(r, s);
+    }), e.edges().forEach((r) => {
+      let o = ce(e.edge(r));
+      n.setEdge(r, Object.assign({}, Ht, ue(o, zt), T(o, qt)));
+    }), n;
+  }
+  function Ut(e) {
+    let n = e.graph();
+    n.ranksep /= 2, e.edges().forEach((t) => {
+      let r = e.edge(t);
+      r.minlen *= 2, r.labelpos.toLowerCase() !== "c" && (n.rankdir === "TB" || n.rankdir === "BT" ? r.width += r.labeloffset : r.height += r.labeloffset);
+    });
+  }
+  function Kt(e) {
+    e.edges().forEach((n) => {
+      let t = e.edge(n);
+      if (t.width && t.height) {
+        let r = e.node(n.v), i = { rank: (e.node(n.w).rank - r.rank) / 2 + r.rank, e: n };
+        w(e, "edge-proxy", i, "_ep");
+      }
+    });
+  }
+  function $t(e) {
+    let n = 0;
+    e.nodes().forEach((t) => {
+      let r = e.node(t);
+      r.borderTop && (r.minRank = e.node(r.borderTop).rank, r.maxRank = e.node(r.borderBottom).rank, n = Math.max(n, r.maxRank));
+    }), e.graph().maxRank = n;
+  }
+  function Jt(e) {
+    e.nodes().forEach((n) => {
+      let t = e.node(n);
+      if (t.dummy === "edge-proxy") {
+        let r = t;
+        e.edge(r.e).labelRank = t.rank, e.removeNode(n);
+      }
+    });
+  }
+  function Qt(e) {
+    let n = Number.POSITIVE_INFINITY, t = 0, r = Number.POSITIVE_INFINITY, o = 0, i = e.graph(), s = i.marginx || 0, a = i.marginy || 0;
+    function d(l) {
+      let u = l.x, c = l.y, h = l.width, f = l.height;
+      n = Math.min(n, u - h / 2), t = Math.max(t, u + h / 2), r = Math.min(r, c - f / 2), o = Math.max(o, c + f / 2);
+    }
+    e.nodes().forEach((l) => d(e.node(l))), e.edges().forEach((l) => {
+      let u = e.edge(l);
+      Object.hasOwn(u, "x") && d(u);
+    }), n -= s, r -= a, e.nodes().forEach((l) => {
+      let u = e.node(l);
+      u.x -= n, u.y -= r;
+    }), e.edges().forEach((l) => {
+      let u = e.edge(l);
+      u.points.forEach((c) => {
+        c.x -= n, c.y -= r;
+      }), Object.hasOwn(u, "x") && (u.x -= n), Object.hasOwn(u, "y") && (u.y -= r);
+    }), i.width = t - n + s, i.height = o - r + a;
+  }
+  function Zt(e) {
+    e.edges().forEach((n) => {
+      let t = e.edge(n), r = e.node(n.v), o = e.node(n.w), i, s;
+      t.points ? (i = t.points[0], s = t.points[t.points.length - 1]) : (t.points = [], i = o, s = r), t.points.unshift(H(r, i)), t.points.push(H(o, s));
+    });
+  }
+  function er(e) {
+    e.edges().forEach((n) => {
+      let t = e.edge(n);
+      if (Object.hasOwn(t, "x")) switch ((t.labelpos === "l" || t.labelpos === "r") && (t.width -= t.labeloffset), t.labelpos) {
+        case "l":
+          t.x -= t.width / 2 + t.labeloffset;
+          break;
+        case "r":
+          t.x += t.width / 2 + t.labeloffset;
+          break;
+      }
+    });
+  }
+  function nr(e) {
+    e.edges().forEach((n) => {
+      let t = e.edge(n);
+      t.reversed && t.points.reverse();
+    });
+  }
+  function tr(e) {
+    e.nodes().forEach((n) => {
+      if (e.children(n).length) {
+        let t = e.node(n), r = e.node(t.borderTop), o = e.node(t.borderBottom), i = e.node(t.borderLeft[t.borderLeft.length - 1]), s = e.node(t.borderRight[t.borderRight.length - 1]);
+        t.width = Math.abs(s.x - i.x), t.height = Math.abs(o.y - r.y), t.x = i.x + t.width / 2, t.y = r.y + t.height / 2;
+      }
+    }), e.nodes().forEach((n) => {
+      e.node(n).dummy === "border" && e.removeNode(n);
+    });
+  }
+  function rr(e) {
+    e.edges().forEach((n) => {
+      if (n.v === n.w) {
+        let t = e.node(n.v);
+        t.selfEdges || (t.selfEdges = []), t.selfEdges.push({ e: n, label: e.edge(n) }), e.removeEdge(n);
+      }
+    });
+  }
+  function or(e) {
+    N(e).forEach((t) => {
+      let r = 0;
+      t.forEach((o, i) => {
+        let s = e.node(o);
+        s.order = i + r, (s.selfEdges || []).forEach((a) => {
+          w(e, "selfedge", { width: a.label.width, height: a.label.height, rank: s.rank, order: i + ++r, e: a.e, label: a.label }, "_se");
+        }), delete s.selfEdges;
+      });
+    });
+  }
+  function ir(e) {
+    e.nodes().forEach((n) => {
+      let t = e.node(n);
+      if (t.dummy === "selfedge") {
+        let r = t, o = e.node(r.e.v), i = o.x + o.width / 2, s = o.y, a = t.x - i, d = o.height / 2;
+        e.setEdge(r.e, r.label), e.removeNode(n), r.label.points = [{ x: i + 2 * a / 3, y: s - d }, { x: i + 5 * a / 6, y: s - d }, { x: i + a, y: s }, { x: i + 5 * a / 6, y: s + d }, { x: i + 2 * a / 3, y: s + d }], r.label.x = t.x, r.label.y = t.y;
+      }
+    });
+  }
+  function ue(e, n) {
+    return O(T(e, n), Number);
+  }
+  function ce(e) {
+    let n = {};
+    return e && Object.entries(e).forEach(([t, r]) => {
+      typeof t == "string" && (t = t.toLowerCase()), n[t] = r;
+    }), n;
+  }
+
+  // webview/src/resourceCategory.ts
+  var RULES = [
+    {
+      category: "network",
+      keywords: [
+        "network",
+        "vnet",
+        "subnet",
+        "vpc",
+        "route",
+        "gateway",
+        "dns",
+        "load_balancer",
+        "lb_",
+        "firewall",
+        "nsg",
+        "security_group"
+      ]
+    },
+    {
+      category: "compute",
+      keywords: [
+        "kubernetes",
+        "_aks",
+        "_eks",
+        "aws_instance",
+        "spot_instance",
+        "_vm",
+        "virtual_machine",
+        "compute",
+        "container_group",
+        "app_service",
+        "function_app",
+        "lambda",
+        "autoscal"
+      ]
+    },
+    {
+      category: "storage",
+      keywords: ["storage", "bucket", "blob", "_disk", "volume", "file_share", "fsx"]
+    },
+    {
+      category: "database",
+      keywords: [
+        "sql",
+        "database",
+        "_db_",
+        "cosmosdb",
+        "dynamodb",
+        "_rds",
+        "postgres",
+        "mysql",
+        "redis",
+        "cache_cluster",
+        "cluster"
+      ]
+    },
+    {
+      category: "security",
+      keywords: ["key_vault", "secret", "certificate", "_iam_", "_role", "policy", "kms", "identity"]
+    },
+    {
+      category: "container",
+      keywords: ["container_registry", "_ecr", "docker"]
+    },
+    {
+      category: "messaging",
+      keywords: ["queue", "sqs", "sns", "topic", "event_hub", "service_bus", "pubsub"]
+    },
+    {
+      category: "monitoring",
+      keywords: ["monitor", "log_analytics", "cloudwatch", "diagnostic", "alert", "metric"]
+    }
+  ];
+  function inferResourceCategory(type) {
+    for (const rule of RULES) {
+      if (rule.keywords.some((keyword) => type.includes(keyword))) {
+        return rule.category;
+      }
+    }
+    return "generic";
+  }
+
+  // webview/src/nodeDetail.ts
+  var CURATED_ATTRIBUTES = {
+    network: ["address_space", "address_prefixes", "cidr_block", "cidr_blocks"],
+    compute: ["vm_size", "instance_type", "size", "sku_name"],
+    storage: ["account_tier", "account_replication_type", "sku"],
+    database: ["sku_name", "version", "engine_version"]
+  };
+  function pickResourceDetail(node) {
+    const category = inferResourceCategory(node.type);
+    const names = CURATED_ATTRIBUTES[category];
+    if (!names) {
+      return void 0;
+    }
+    for (const name of names) {
+      const value = node.attributes[name];
+      if (value) {
+        return value;
+      }
+    }
+    return void 0;
+  }
+  function pickVariableDetail(node) {
+    const isSensitive = node.attributes.sensitive === "true";
+    if (!isSensitive && node.attributes.default) {
+      return node.attributes.default;
+    }
+    return node.attributes.description || void 0;
+  }
+  function pickOutputDetail(node) {
+    return node.attributes.value || node.attributes.description || void 0;
+  }
+  function pickLocalsDetail(node) {
+    return node.attributes[node.name] || void 0;
+  }
+  function pickNodeDetail(node) {
+    switch (node.kind) {
+      case "resource":
+      case "data":
+        return pickResourceDetail(node);
+      case "variable":
+        return pickVariableDetail(node);
+      case "output":
+        return pickOutputDetail(node);
+      case "locals":
+        return pickLocalsDetail(node);
+      default:
+        return void 0;
+    }
+  }
+
+  // webview/src/textMeasure.ts
+  var FALLBACK_CHAR_WIDTH = 7.2;
+  var sharedCtx;
+  function getSharedContext() {
+    if (typeof document === "undefined") {
+      return null;
+    }
+    if (sharedCtx === void 0) {
+      try {
+        const canvas = document.createElement("canvas");
+        sharedCtx = canvas.getContext("2d");
+      } catch {
+        sharedCtx = null;
+      }
+    }
+    return sharedCtx;
+  }
+  function createTextMeasurer(font) {
+    const ctx = getSharedContext();
+    if (!ctx) {
+      return (text) => text.length * FALLBACK_CHAR_WIDTH;
+    }
+    return (text) => {
+      ctx.font = font;
+      return ctx.measureText(text).width;
+    };
+  }
+  function resolveEffectiveFontFamily() {
+    if (typeof document === "undefined" || typeof getComputedStyle !== "function") {
+      return "sans-serif";
+    }
+    const computed = getComputedStyle(document.body).fontFamily;
+    return computed && computed.trim() !== "" ? computed : "sans-serif";
+  }
+
+  // webview/src/textWrap.ts
+  var BREAK_CHAR = /[_,\s]/;
+  function splitIntoUnits(text) {
+    const units = [];
+    let current = "";
+    for (const ch of text) {
+      current += ch;
+      if (BREAK_CHAR.test(ch)) {
+        units.push(current);
+        current = "";
+      }
+    }
+    if (current !== "") {
+      units.push(current);
+    }
+    return units;
+  }
+  function wrapText(text, maxWidthPx, measure) {
+    if (text.length === 0) {
+      return [""];
+    }
+    const units = splitIntoUnits(text);
+    const lines = [];
+    let current = "";
+    const hardBreak = (segment) => {
+      let chunk = "";
+      for (const ch of segment) {
+        const candidate = chunk + ch;
+        if (chunk === "" || measure(candidate) <= maxWidthPx) {
+          chunk = candidate;
+        } else {
+          lines.push(chunk);
+          chunk = ch;
+        }
+      }
+      current = chunk;
+    };
+    for (const unit of units) {
+      if (current === "") {
+        if (measure(unit) > maxWidthPx) {
+          hardBreak(unit);
+        } else {
+          current = unit;
+        }
+        continue;
+      }
+      const candidate = current + unit;
+      if (measure(candidate) <= maxWidthPx) {
+        current = candidate;
+        continue;
+      }
+      lines.push(current);
+      current = "";
+      if (measure(unit) > maxWidthPx) {
+        hardBreak(unit);
+      } else {
+        current = unit;
+      }
+    }
+    if (current !== "") {
+      lines.push(current);
+    }
+    const trimmedLines = lines.map((line) => line.trim()).filter((line) => line.length > 0);
+    return trimmedLines.length > 0 ? trimmedLines : [""];
+  }
+  function packIntoRows(items, maxWidthPx, measure) {
+    const rows = [];
+    let currentRow = [];
+    let currentWidth = 0;
+    for (const item of items) {
+      const itemWidth = measure(item);
+      if (currentRow.length > 0 && currentWidth + itemWidth > maxWidthPx) {
+        rows.push(currentRow);
+        currentRow = [];
+        currentWidth = 0;
+      }
+      currentRow.push(item);
+      currentWidth += itemWidth;
+    }
+    if (currentRow.length > 0) {
+      rows.push(currentRow);
+    }
+    return rows;
+  }
+
+  // webview/src/layout.ts
+  var RANKDIR = "TB";
+  var NODESEP = 90;
+  var RANKSEP = 64;
+  var MARGIN = 24;
+  var MIN_WIDTH = 96;
+  var MAX_WIDTH = 260;
+  var ICON_BADGE_SIZE = 20;
+  var ICON_BADGE_RADIUS = 6;
+  var ICON_BADGE_INSET = 7;
+  var CONTENT_TOP_RESERVE = ICON_BADGE_INSET + ICON_BADGE_SIZE + 7;
+  var TEXT_PADDING_X = 16;
+  var WRAP_WIDTH = MAX_WIDTH - TEXT_PADDING_X;
+  var NAME_FONT_SIZE = 12;
+  var TYPE_FONT_SIZE = 10;
+  var DETAIL_FONT_SIZE = 9;
+  var CHIP_FONT_SIZE = 9;
+  var NAME_FONT_WEIGHT = "600 ";
+  var DETAIL_FONT_STYLE = "italic ";
+  var NAME_LINE_HEIGHT = 14;
+  var TYPE_LINE_HEIGHT = 12;
+  var DETAIL_LINE_HEIGHT = 11;
+  var NAME_TYPE_GAP = 4;
+  var TYPE_DETAIL_GAP = NAME_TYPE_GAP;
+  var CHIP_BLOCK_GAP = NAME_TYPE_GAP;
+  var PADDING_BOTTOM = 14;
+  var CHIP_GAP_X = 6;
+  var CHIP_GAP_Y = 4;
+  var CHIP_PADDING_X = 8;
+  var CHIP_LINE_HEIGHT = 11;
+  var CHIP_PADDING_Y = 5;
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+  function hasSubtitle(kind) {
+    return kind === "resource" || kind === "data" || kind === "module";
+  }
+  function chipLabel(variableNode) {
+    const detail = pickNodeDetail(variableNode);
+    return detail ? `${variableNode.name}: ${detail}` : variableNode.name;
+  }
+  function buildChipRows(node, variablesByAddress, measureChip) {
+    const chips = [];
+    for (const address of node.referencedVariables) {
+      const variableNode = variablesByAddress.get(address);
+      if (!variableNode) {
+        continue;
+      }
+      const text = chipLabel(variableNode);
+      const lines = wrapText(text, WRAP_WIDTH - CHIP_PADDING_X * 2, measureChip);
+      const width = Math.max(...lines.map(measureChip)) + CHIP_PADDING_X * 2;
+      const height = lines.length * CHIP_LINE_HEIGHT + CHIP_PADDING_Y;
+      chips.push({ address, lines, width, height });
+    }
+    if (chips.length === 0) {
+      return [];
+    }
+    return packIntoRows(chips, WRAP_WIDTH, (chip) => chip.width + CHIP_GAP_X);
+  }
+  function estimateNodeSize(node, measureName, measureType, measureDetail, chipContext) {
+    const subtitle = hasSubtitle(node.kind);
+    const nameLines = wrapText(node.name, WRAP_WIDTH, measureName);
+    const typeLines = subtitle ? wrapText(node.type, WRAP_WIDTH, measureType) : [];
+    const detailValue = pickNodeDetail(node);
+    const detailLines = detailValue ? wrapText(detailValue, WRAP_WIDTH, measureDetail) : [];
+    const chipRows = chipContext && (node.kind === "resource" || node.kind === "data") && node.referencedVariables.length > 0 ? buildChipRows(node, chipContext.variablesByAddress, chipContext.measureChip) : [];
+    const widestNameLine = Math.max(...nameLines.map(measureName));
+    const widestTypeLine = typeLines.length > 0 ? Math.max(...typeLines.map(measureType)) : 0;
+    const widestDetailLine = detailLines.length > 0 ? Math.max(...detailLines.map(measureDetail)) : 0;
+    const widestChipRow = chipRows.length > 0 ? Math.max(
+      ...chipRows.map((row) => row.reduce((sum, chip) => sum + chip.width, 0) + (row.length - 1) * CHIP_GAP_X)
+    ) : 0;
+    const widestLine = Math.max(widestNameLine, widestTypeLine, widestDetailLine, widestChipRow);
+    const width = clamp(widestLine + TEXT_PADDING_X, MIN_WIDTH, MAX_WIDTH);
+    const nameBlockHeight = nameLines.length * NAME_LINE_HEIGHT;
+    const typeBlockHeight = subtitle ? NAME_TYPE_GAP + typeLines.length * TYPE_LINE_HEIGHT : 0;
+    const detailBlockHeight = detailLines.length > 0 ? TYPE_DETAIL_GAP + detailLines.length * DETAIL_LINE_HEIGHT : 0;
+    const chipBlockHeight = chipRows.length > 0 ? CHIP_BLOCK_GAP + chipRows.reduce((sum, row) => sum + Math.max(...row.map((chip) => chip.height)), 0) + (chipRows.length - 1) * CHIP_GAP_Y : 0;
+    const height = CONTENT_TOP_RESERVE + PADDING_BOTTOM + nameBlockHeight + typeBlockHeight + detailBlockHeight + chipBlockHeight;
+    return { width, height, nameLines, typeLines, detailLines, chipRows };
+  }
+  function clusterId(module) {
+    return `cluster:${module}`;
+  }
+  function computeLayout(model, options) {
+    const g = new z.Graph({ compound: true });
+    g.setGraph({
+      rankdir: RANKDIR,
+      nodesep: NODESEP,
+      ranksep: RANKSEP,
+      marginx: MARGIN,
+      marginy: MARGIN
+    });
+    g.setDefaultEdgeLabel(() => ({}));
+    const fontFamily = resolveEffectiveFontFamily();
+    const measureName = createTextMeasurer(`${NAME_FONT_WEIGHT}${NAME_FONT_SIZE}px ${fontFamily}`);
+    const measureType = createTextMeasurer(`${TYPE_FONT_SIZE}px ${fontFamily}`);
+    const measureDetail = createTextMeasurer(`${DETAIL_FONT_STYLE}${DETAIL_FONT_SIZE}px ${fontFamily}`);
+    const measureChip = createTextMeasurer(`${CHIP_FONT_SIZE}px ${fontFamily}`);
+    const chipContext = options?.variablesByAddress ? { variablesByAddress: options.variablesByAddress, measureChip } : void 0;
+    const modules = new Set(model.nodes.map((n) => n.module));
+    for (const moduleLabel of modules) {
+      g.setNode(clusterId(moduleLabel), { width: 0, height: 0 });
+    }
+    const nodeExtras = /* @__PURE__ */ new Map();
+    for (const node of model.nodes) {
+      const { width, height, nameLines, typeLines, detailLines, chipRows } = node.kind === "module" ? { width: 0, height: 0, nameLines: [], typeLines: [], detailLines: [], chipRows: [] } : estimateNodeSize(node, measureName, measureType, measureDetail, chipContext);
+      g.setNode(node.address, { width, height });
+      g.setParent(node.address, clusterId(node.module));
+      nodeExtras.set(node.address, { nameLines, typeLines, detailLines, chipRows });
+    }
+    for (const edge of model.edges) {
+      if (!g.hasNode(edge.from) || !g.hasNode(edge.to)) {
+        continue;
+      }
+      g.setEdge(edge.to, edge.from);
+    }
+    he(g);
+    const nodes = [];
+    for (const node of model.nodes) {
+      const label = g.node(node.address);
+      const extras = nodeExtras.get(node.address) ?? {
+        nameLines: [node.name],
+        typeLines: [],
+        detailLines: [],
+        chipRows: []
+      };
+      const override = options?.positionOverrides?.get(node.address);
+      nodes.push({
+        ...node,
+        x: override?.x ?? label.x ?? 0,
+        y: override?.y ?? label.y ?? 0,
+        width: label.width ?? 0,
+        height: label.height ?? 0,
+        nameLines: extras.nameLines,
+        typeLines: extras.typeLines,
+        detailLines: extras.detailLines,
+        chipRows: extras.chipRows
+      });
+    }
+    const finalPositionByAddress = new Map(nodes.map((n) => [n.address, { x: n.x, y: n.y }]));
+    const overriddenAddresses = new Set(options?.positionOverrides?.keys() ?? []);
+    const clusters = [];
+    for (const moduleLabel of modules) {
+      const label = g.node(clusterId(moduleLabel));
+      if (!label) {
+        continue;
+      }
+      clusters.push({
+        module: moduleLabel,
+        x: (label.x ?? 0) - (label.width ?? 0) / 2,
+        y: (label.y ?? 0) - (label.height ?? 0) / 2,
+        width: label.width ?? 0,
+        height: label.height ?? 0
+      });
+    }
+    const moduleNodeAddresses = new Set(model.nodes.filter((n) => n.kind === "module").map((n) => n.address));
+    const edges = g.edges().filter((e) => !moduleNodeAddresses.has(e.v) && !moduleNodeAddresses.has(e.w)).map((e) => {
+      const label = g.edge(e);
+      const involvesOverride = overriddenAddresses.has(e.v) || overriddenAddresses.has(e.w);
+      const sourcePos = finalPositionByAddress.get(e.v);
+      const dependentPos = finalPositionByAddress.get(e.w);
+      const points = involvesOverride && sourcePos && dependentPos ? [sourcePos, dependentPos] : (label.points ?? []).map((p2) => ({ x: p2.x, y: p2.y }));
+      return {
+        from: e.w,
+        to: e.v,
+        points
+      };
+    });
+    const graphLabel = g.graph();
+    return {
+      nodes,
+      edges,
+      clusters,
+      width: graphLabel.width ?? 0,
+      height: graphLabel.height ?? 0
+    };
+  }
+
+  // webview/src/svg.ts
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs = {}) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      el.setAttribute(key, String(value));
+    }
+    return el;
+  }
+
+  // webview/src/icons.ts
+  var VIEWBOX_SIZE = 24;
+  var STROKE_ATTRS = {
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": 1.6,
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  };
+  function shape(tag, attrs = {}) {
+    return svgEl(tag, { ...STROKE_ATTRS, ...attrs });
+  }
+  var GLYPHS = {
+    // Three nodes joined by lines (a small mesh/triangle) - the simplest
+    // possible "network" concept: things, connected.
+    network: () => [
+      shape("line", { x1: 6, y1: 7, x2: 18, y2: 7 }),
+      shape("line", { x1: 6, y1: 7, x2: 12, y2: 18 }),
+      shape("line", { x1: 18, y1: 7, x2: 12, y2: 18 }),
+      shape("circle", { cx: 6, cy: 7, r: 2.4 }),
+      shape("circle", { cx: 18, cy: 7, r: 2.4 }),
+      shape("circle", { cx: 12, cy: 18, r: 2.4 })
+    ],
+    // A server rack: an outer body with two horizontal dividers.
+    compute: () => [
+      shape("rect", { x: 5, y: 3, width: 14, height: 18, rx: 2 }),
+      shape("line", { x1: 5, y1: 10, x2: 19, y2: 10 }),
+      shape("line", { x1: 5, y1: 16, x2: 19, y2: 16 })
+    ],
+    // A disk/drive: a body, a divider line near the top, and an activity dot.
+    storage: () => [
+      shape("rect", { x: 4, y: 5, width: 16, height: 14, rx: 2 }),
+      shape("line", { x1: 4, y1: 10, x2: 20, y2: 10 }),
+      shape("circle", { cx: 8, cy: 15, r: 1.3 })
+    ],
+    // The classic stacked-cylinder database glyph: an ellipse "lid", two
+    // vertical sides, and a bottom + mid-body curve.
+    database: () => [
+      shape("ellipse", { cx: 12, cy: 6, rx: 7, ry: 3 }),
+      shape("path", { d: "M5 6 V18 A7 3 0 0 0 19 18 V6" }),
+      shape("path", { d: "M5 12 A7 3 0 0 0 19 12" })
+    ],
+    // A padlock: an arc "shackle" over a rounded body, with a keyhole slot.
+    security: () => [
+      shape("path", { d: "M8 11 V8 a4 4 0 0 1 8 0 V11" }),
+      shape("rect", { x: 5, y: 11, width: 14, height: 9, rx: 2 }),
+      shape("line", { x1: 12, y1: 14.5, x2: 12, y2: 17 })
+    ],
+    // A package/box: a body with a lid seam and a center crease.
+    container: () => [
+      shape("rect", { x: 4, y: 6, width: 16, height: 14, rx: 1.5 }),
+      shape("line", { x1: 4, y1: 10, x2: 20, y2: 10 }),
+      shape("line", { x1: 12, y1: 10, x2: 12, y2: 20 })
+    ],
+    // An envelope: a body with a "V" flap.
+    messaging: () => [
+      shape("rect", { x: 3, y: 6, width: 18, height: 13, rx: 2 }),
+      shape("path", { d: "M3.5 7 L12 14 L20.5 7" })
+    ],
+    // A small line chart on axes.
+    monitoring: () => [
+      shape("path", { d: "M4 4 V20 H20" }),
+      shape("path", { d: "M5 17 L10 10 L14 14 L20 6" })
+    ],
+    // Plain rounded box outline - the deliberately-featureless fallback for
+    // provider-agnostic utility resources (random_pet, local_file,
+    // null_resource, time_sleep, tls_private_key, archive_file, ...) that
+    // don't fit any cloud-resource-shaped category.
+    generic: () => [shape("rect", { x: 5, y: 5, width: 14, height: 14, rx: 3 })],
+    // A folder silhouette (body + top-left tab), all in one path.
+    module: () => [
+      shape("path", {
+        d: "M4 9 V6.5 a1 1 0 0 1 1 -1 h4.5 l2 2 H19 a1 1 0 0 1 1 1 V17 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 Z"
+      })
+    ],
+    // An arrow feeding into a small box on the right - "a value flowing in".
+    variable: () => [
+      shape("rect", { x: 14, y: 8, width: 6, height: 8, rx: 1 }),
+      shape("line", { x1: 3, y1: 12, x2: 12, y2: 12 }),
+      shape("path", { d: "M9 8 L13 12 L9 16" })
+    ],
+    // Mirror image of `variable`: a box on the left with an arrow leaving it
+    // on the right - "a value flowing out" - deliberately the visual opposite
+    // of the `variable` glyph above.
+    output: () => [
+      shape("rect", { x: 4, y: 8, width: 6, height: 8, rx: 1 }),
+      shape("line", { x1: 12, y1: 12, x2: 21, y2: 12 }),
+      shape("path", { d: "M15 8 L19 12 L15 16" })
+    ],
+    // A price-tag silhouette (point + rounded body + hole).
+    locals: () => [
+      shape("path", { d: "M4 12 L9 6 H18 a2 2 0 0 1 2 2 V16 a2 2 0 0 1 -2 2 H9 Z" }),
+      shape("circle", { cx: 9.5, cy: 12, r: 1.1 })
+    ]
+  };
+  function buildIcon(category, size) {
+    const icon = svgEl("svg", {
+      width: size,
+      height: size,
+      viewBox: `0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`,
+      class: "node-icon"
+    });
+    for (const el of GLYPHS[category]()) {
+      icon.appendChild(el);
+    }
+    return icon;
+  }
+
+  // webview/src/render.ts
+  var ICON_SIZE = 16;
+  var CORNER_RADIUS_MIN = 8;
+  var CORNER_RADIUS_MAX = 14;
+  var CORNER_RADIUS_HEIGHT_RATIO = 0.22;
+  function cardCornerRadius(height) {
+    return Math.min(CORNER_RADIUS_MAX, Math.max(CORNER_RADIUS_MIN, height * CORNER_RADIUS_HEIGHT_RATIO));
+  }
+  function isConfigKind(kind) {
+    return kind === "variable" || kind === "output" || kind === "locals";
+  }
+  function kindClass(kind) {
+    return `node-kind-${kind}`;
+  }
+  function buildArrowheadMarker() {
+    const marker = svgEl("marker", {
+      id: "tf-graph-arrowhead",
+      viewBox: "0 0 10 10",
+      refX: 9,
+      refY: 5,
+      markerWidth: 8,
+      markerHeight: 8,
+      orient: "auto-start-reverse"
+    });
+    const arrowPath = svgEl("path", {
+      d: "M 1 1 L 9 5 L 1 9 Q 3.2 5 1 1 Z",
+      class: "edge-arrowhead"
+    });
+    marker.appendChild(arrowPath);
+    return marker;
+  }
+  function buildShadowFilter(id, dy, blur, floodClass) {
+    const filter = svgEl("filter", { id, x: "-60%", y: "-60%", width: "220%", height: "220%" });
+    filter.appendChild(
+      svgEl("feDropShadow", {
+        dx: 0,
+        dy,
+        stdDeviation: blur,
+        class: floodClass
+      })
+    );
+    return filter;
+  }
+  function buildNodeGradient(bucket) {
+    const gradient = svgEl("linearGradient", {
+      id: `tf-node-gradient-${bucket}`,
+      x1: "0",
+      y1: "0",
+      x2: "0",
+      y2: "1"
+    });
+    gradient.appendChild(svgEl("stop", { offset: "0%", class: "node-gradient-stop-start" }));
+    gradient.appendChild(svgEl("stop", { offset: "100%", class: `node-gradient-stop-end-${bucket}` }));
+    return gradient;
+  }
+  var ACCENT_BUCKETS = ["resource", "data", "module", "config"];
+  function buildDefs() {
+    const defs = svgEl("defs");
+    defs.appendChild(buildArrowheadMarker());
+    defs.appendChild(buildShadowFilter("tf-node-shadow", 1, 2, "node-shadow-flood"));
+    defs.appendChild(buildShadowFilter("tf-node-shadow-hover", 2, 4, "node-shadow-flood-hover"));
+    for (const bucket of ACCENT_BUCKETS) {
+      defs.appendChild(buildNodeGradient(bucket));
+    }
+    return defs;
+  }
+  function buildCluster(cluster, onNodeClick) {
+    const isModuleCluster = cluster.module !== "root";
+    const group = svgEl("g", { class: isModuleCluster ? "cluster cluster-module" : "cluster" });
+    if (isModuleCluster) {
+      group.setAttribute("data-module", cluster.module);
+      group.addEventListener("pointerdown", (event) => event.stopPropagation());
+      group.addEventListener("click", () => onNodeClick(cluster.module));
+    }
+    group.appendChild(
+      svgEl("rect", {
+        x: cluster.x,
+        y: cluster.y,
+        width: Math.max(cluster.width, 1),
+        height: Math.max(cluster.height, 1),
+        rx: 16,
+        ry: 16,
+        class: "cluster-rect"
+      })
+    );
+    group.appendChild(
+      svgEl("circle", {
+        cx: cluster.x + 16,
+        cy: cluster.y + 14,
+        r: 3,
+        class: "cluster-label-dot"
+      })
+    );
+    const label = svgEl("text", {
+      x: cluster.x + 24,
+      y: cluster.y + 18,
+      class: "cluster-label"
+    });
+    label.textContent = cluster.module;
+    group.appendChild(label);
+    return group;
+  }
+  function smoothEdgePath(points) {
+    if (points.length === 0) {
+      return "";
+    }
+    if (points.length < 3) {
+      const [first, ...rest] = points;
+      const segments = rest.map((p2) => `L ${p2.x} ${p2.y}`);
+      return `M ${first.x} ${first.y} ${segments.join(" ")}`.trim();
+    }
+    const padded = [points[0], ...points, points[points.length - 1]];
+    const TENSION_DIVISOR = 10;
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < padded.length - 3; i++) {
+      const p0 = padded[i];
+      const p1 = padded[i + 1];
+      const p2 = padded[i + 2];
+      const p3 = padded[i + 3];
+      const c1x = p1.x + (p2.x - p0.x) / TENSION_DIVISOR;
+      const c1y = p1.y + (p2.y - p0.y) / TENSION_DIVISOR;
+      const c2x = p2.x - (p3.x - p1.x) / TENSION_DIVISOR;
+      const c2y = p2.y - (p3.y - p1.y) / TENSION_DIVISOR;
+      d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+    }
+    return d;
+  }
+  function buildEdge(edge) {
+    return svgEl("path", {
+      d: smoothEdgePath(edge.points),
+      class: "edge-path",
+      "marker-end": "url(#tf-graph-arrowhead)",
+      // Consulted only by wireFocusHighlight() below, to find every edge
+      // touching a hovered node/cluster without re-deriving it from
+      // PositionedGraph.edges (which has no direct link back to the DOM
+      // elements built here).
+      "data-from": edge.from,
+      "data-to": edge.to
+    });
+  }
+  function nodeIconCategory(node) {
+    if (node.kind === "resource" || node.kind === "data") {
+      return inferResourceCategory(node.type);
+    }
+    return node.kind;
+  }
+  function buildMultilineText(lines, centerX, startY, lineHeight, cssClass) {
+    const text = svgEl("text", {
+      x: centerX,
+      y: startY,
+      class: cssClass,
+      "text-anchor": "middle"
+    });
+    lines.forEach((line, i) => {
+      const tspan = svgEl("tspan", i === 0 ? { x: centerX } : { x: centerX, dy: lineHeight });
+      tspan.textContent = line;
+      text.appendChild(tspan);
+    });
+    return text;
+  }
+  function buildChipRows2(rows, centerX, topY) {
+    const group = svgEl("g", { class: "node-chips" });
+    let rowY = topY;
+    for (const row of rows) {
+      const rowWidth = row.reduce((sum, chip) => sum + chip.width, 0) + (row.length - 1) * CHIP_GAP_X;
+      const rowHeight = Math.max(...row.map((chip) => chip.height));
+      let chipX = centerX - rowWidth / 2;
+      for (const chip of row) {
+        const chipGroup = svgEl("g", {
+          class: "node-chip",
+          // Vertically center a shorter chip within a taller row (e.g. a
+          // 1-line chip sharing a row with a 2-line chip).
+          transform: `translate(${chipX}, ${rowY + (rowHeight - chip.height) / 2})`
+        });
+        const chipTitle = svgEl("title");
+        chipTitle.textContent = chip.address;
+        chipGroup.appendChild(chipTitle);
+        const chipRadius = Math.min(chip.height / 2, 8);
+        chipGroup.appendChild(
+          svgEl("rect", {
+            width: chip.width,
+            height: chip.height,
+            rx: chipRadius,
+            ry: chipRadius,
+            class: "node-chip-rect"
+          })
+        );
+        const textStartY = chip.height / 2 - (chip.lines.length - 1) * CHIP_LINE_HEIGHT / 2;
+        const chipText = buildMultilineText(chip.lines, chip.width / 2, textStartY, CHIP_LINE_HEIGHT, "node-chip-label");
+        chipGroup.appendChild(chipText);
+        group.appendChild(chipGroup);
+        chipX += chip.width + CHIP_GAP_X;
+      }
+      rowY += rowHeight + CHIP_GAP_Y;
+    }
+    return group;
+  }
+  var DRAG_THRESHOLD_PX = 4;
+  function transformDeltaByInverseMatrix(matrix, dx, dy) {
+    const inverse = matrix.inverse();
+    return {
+      dx: dx * inverse.a + dy * inverse.c,
+      dy: dx * inverse.b + dy * inverse.d
+    };
+  }
+  function buildNode(node, onNodeClick, onNodeDragEnd) {
+    const group = svgEl("g", {
+      class: `node ${kindClass(node.kind)}`,
+      "data-address": node.address,
+      transform: `translate(${node.x - node.width / 2}, ${node.y - node.height / 2})`
+    });
+    const title = svgEl("title");
+    title.textContent = node.address;
+    group.appendChild(title);
+    const card = svgEl("g", { class: "node-card" });
+    group.appendChild(card);
+    card.appendChild(
+      svgEl("rect", {
+        width: node.width,
+        height: node.height,
+        rx: cardCornerRadius(node.height),
+        ry: cardCornerRadius(node.height),
+        class: "node-rect"
+      })
+    );
+    const badgeX = ICON_BADGE_INSET;
+    const badgeY = ICON_BADGE_INSET;
+    card.appendChild(
+      svgEl("rect", {
+        x: badgeX,
+        y: badgeY,
+        width: ICON_BADGE_SIZE,
+        height: ICON_BADGE_SIZE,
+        rx: ICON_BADGE_RADIUS,
+        ry: ICON_BADGE_RADIUS,
+        class: "node-icon-badge"
+      })
+    );
+    const icon = buildIcon(nodeIconCategory(node), ICON_SIZE);
+    icon.setAttribute("x", String(ICON_BADGE_INSET + (ICON_BADGE_SIZE - ICON_SIZE) / 2));
+    icon.setAttribute("y", String(ICON_BADGE_INSET + (ICON_BADGE_SIZE - ICON_SIZE) / 2));
+    card.appendChild(icon);
+    const textCenterX = node.width / 2;
+    const showSubtitle = node.kind === "resource" || node.kind === "data" || node.kind === "module";
+    const hasDetail = node.detailLines.length > 0;
+    const hasChips = node.chipRows.length > 0;
+    const nameBlockHeight = node.nameLines.length * NAME_LINE_HEIGHT;
+    const typeBlockHeight = showSubtitle ? NAME_TYPE_GAP + node.typeLines.length * TYPE_LINE_HEIGHT : 0;
+    const detailBlockHeight = hasDetail ? TYPE_DETAIL_GAP + node.detailLines.length * DETAIL_LINE_HEIGHT : 0;
+    const blockTop = CONTENT_TOP_RESERVE;
+    const content = svgEl("g", { class: "node-content" });
+    card.appendChild(content);
+    const nameStartY = blockTop + NAME_LINE_HEIGHT / 2;
+    const nameText = buildMultilineText(node.nameLines, textCenterX, nameStartY, NAME_LINE_HEIGHT, "node-label");
+    content.appendChild(nameText);
+    if (showSubtitle) {
+      const typeStartY = blockTop + nameBlockHeight + NAME_TYPE_GAP + TYPE_LINE_HEIGHT / 2;
+      const typeText = buildMultilineText(node.typeLines, textCenterX, typeStartY, TYPE_LINE_HEIGHT, "node-type");
+      content.appendChild(typeText);
+    }
+    if (hasDetail) {
+      const detailStartY = blockTop + nameBlockHeight + typeBlockHeight + TYPE_DETAIL_GAP + DETAIL_LINE_HEIGHT / 2;
+      const detailText = buildMultilineText(
+        node.detailLines,
+        textCenterX,
+        detailStartY,
+        DETAIL_LINE_HEIGHT,
+        "node-detail"
+      );
+      content.appendChild(detailText);
+    }
+    if (hasChips) {
+      const chipsTop = blockTop + nameBlockHeight + typeBlockHeight + detailBlockHeight + CHIP_BLOCK_GAP;
+      content.appendChild(buildChipRows2(node.chipRows, textCenterX, chipsTop));
+    }
+    let dragState = null;
+    function applyDragTransform() {
+      if (!dragState) {
+        return;
+      }
+      const offsetX = dragState.currentX - dragState.baseX;
+      const offsetY = dragState.currentY - dragState.baseY;
+      group.setAttribute(
+        "transform",
+        `translate(${node.x - node.width / 2 + offsetX}, ${node.y - node.height / 2 + offsetY})`
+      );
+    }
+    function onPointerDown(event) {
+      event.stopPropagation();
+      dragState = {
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        baseX: node.x,
+        baseY: node.y,
+        currentX: node.x,
+        currentY: node.y,
+        movedPastThreshold: false
+      };
+      group.setPointerCapture(event.pointerId);
+    }
+    function onPointerMove(event) {
+      if (!dragState || event.pointerId !== dragState.pointerId) {
+        return;
+      }
+      const dxClient = event.clientX - dragState.startClientX;
+      const dyClient = event.clientY - dragState.startClientY;
+      if (!dragState.movedPastThreshold && Math.hypot(dxClient, dyClient) >= DRAG_THRESHOLD_PX) {
+        dragState.movedPastThreshold = true;
+        group.classList.add("node-dragging");
+      }
+      const ctm = group.getScreenCTM();
+      if (!ctm) {
+        return;
+      }
+      const { dx, dy } = transformDeltaByInverseMatrix(ctm, dxClient, dyClient);
+      dragState.currentX = dragState.baseX + dx;
+      dragState.currentY = dragState.baseY + dy;
+      applyDragTransform();
+    }
+    function endDrag(event) {
+      if (!dragState || event.pointerId !== dragState.pointerId) {
+        return;
+      }
+      if (group.hasPointerCapture(event.pointerId)) {
+        group.releasePointerCapture(event.pointerId);
+      }
+      group.classList.remove("node-dragging");
+      const { movedPastThreshold, currentX, currentY } = dragState;
+      dragState = null;
+      if (movedPastThreshold) {
+        onNodeDragEnd(node.address, currentX, currentY);
+      } else {
+        onNodeClick(node.address);
+      }
+    }
+    group.addEventListener("pointerdown", onPointerDown);
+    group.addEventListener("pointermove", onPointerMove);
+    group.addEventListener("pointerup", endDrag);
+    group.addEventListener("pointercancel", endDrag);
+    return group;
+  }
+  function wireFocusHighlight(nodesGroup, clustersGroup, edgesGroup, nodes) {
+    const nodeElements = Array.from(nodesGroup.children);
+    const clusterElements = Array.from(clustersGroup.children).filter(
+      (el) => el.hasAttribute("data-module")
+    );
+    const edgeElements = Array.from(edgesGroup.children);
+    const edgesByAddress = /* @__PURE__ */ new Map();
+    const neighborsByAddress = /* @__PURE__ */ new Map();
+    function link(address, neighbor, edgeEl) {
+      const edges = edgesByAddress.get(address) ?? [];
+      edges.push(edgeEl);
+      edgesByAddress.set(address, edges);
+      const neighbors = neighborsByAddress.get(address) ?? /* @__PURE__ */ new Set();
+      neighbors.add(neighbor);
+      neighborsByAddress.set(address, neighbors);
+    }
+    for (const edgeEl of edgeElements) {
+      const from = edgeEl.getAttribute("data-from");
+      const to = edgeEl.getAttribute("data-to");
+      if (!from || !to) {
+        continue;
+      }
+      link(from, to, edgeEl);
+      link(to, from, edgeEl);
+    }
+    const membersByModule = /* @__PURE__ */ new Map();
+    for (const node of nodes) {
+      if (node.kind === "module") {
+        continue;
+      }
+      const members = membersByModule.get(node.module) ?? [];
+      members.push(node.address);
+      membersByModule.set(node.module, members);
+    }
+    function applyFocus(focusAddresses) {
+      const connectedEdges = /* @__PURE__ */ new Set();
+      const neighbors = /* @__PURE__ */ new Set();
+      for (const address of focusAddresses) {
+        for (const edgeEl of edgesByAddress.get(address) ?? []) {
+          connectedEdges.add(edgeEl);
+        }
+        for (const neighbor of neighborsByAddress.get(address) ?? []) {
+          neighbors.add(neighbor);
+        }
+      }
+      for (const el of nodeElements) {
+        const address = el.getAttribute("data-address") ?? "";
+        el.classList.toggle("graph-dimmed", !focusAddresses.has(address) && !neighbors.has(address));
+      }
+      for (const el of clusterElements) {
+        const members = membersByModule.get(el.getAttribute("data-module") ?? "") ?? [];
+        const relevant = members.some((address) => focusAddresses.has(address) || neighbors.has(address));
+        el.classList.toggle("graph-dimmed", !relevant);
+      }
+      for (const edgeEl of edgeElements) {
+        edgeEl.classList.toggle("edge-dimmed", !connectedEdges.has(edgeEl));
+      }
+    }
+    function clearFocus() {
+      for (const el of nodeElements) {
+        el.classList.remove("graph-dimmed");
+      }
+      for (const el of clusterElements) {
+        el.classList.remove("graph-dimmed");
+      }
+      for (const edgeEl of edgeElements) {
+        edgeEl.classList.remove("edge-dimmed");
+      }
+    }
+    for (const el of nodeElements) {
+      const address = el.getAttribute("data-address");
+      if (!address) {
+        continue;
+      }
+      el.addEventListener("pointerenter", () => applyFocus(/* @__PURE__ */ new Set([address])));
+      el.addEventListener("pointerleave", clearFocus);
+    }
+    for (const el of clusterElements) {
+      const moduleScope = el.getAttribute("data-module");
+      if (!moduleScope) {
+        continue;
+      }
+      const members = membersByModule.get(moduleScope) ?? [];
+      el.addEventListener("pointerenter", () => applyFocus(new Set(members)));
+      el.addEventListener("pointerleave", clearFocus);
+    }
+  }
+  function renderGraph(container, positioned, onNodeClick, onNodeDragEnd) {
+    container.innerHTML = "";
+    const svg = svgEl("svg", { class: "graph-svg" });
+    svg.appendChild(buildDefs());
+    const viewport = svgEl("g", { id: "viewport" });
+    const clustersGroup = svgEl("g", { class: "clusters" });
+    for (const cluster of positioned.clusters) {
+      clustersGroup.appendChild(buildCluster(cluster, onNodeClick));
+    }
+    viewport.appendChild(clustersGroup);
+    const edgesGroup = svgEl("g", { class: "edges" });
+    for (const edge of positioned.edges) {
+      edgesGroup.appendChild(buildEdge(edge));
+    }
+    viewport.appendChild(edgesGroup);
+    const nodesGroup = svgEl("g", { class: "nodes" });
+    for (const node of positioned.nodes) {
+      if (node.kind === "module") {
+        continue;
+      }
+      nodesGroup.appendChild(buildNode(node, onNodeClick, onNodeDragEnd));
+    }
+    viewport.appendChild(nodesGroup);
+    wireFocusHighlight(nodesGroup, clustersGroup, edgesGroup, positioned.nodes);
+    svg.appendChild(viewport);
+    container.appendChild(svg);
+    centerNodeContent(nodesGroup);
+  }
+  function centerNodeContent(nodesGroup) {
+    for (const nodeGroup of Array.from(nodesGroup.children)) {
+      const content = nodeGroup.querySelector(".node-content");
+      const rect = nodeGroup.querySelector(".node-rect");
+      if (!(content instanceof SVGGElement) || !(rect instanceof SVGRectElement)) {
+        continue;
+      }
+      const cardHeight = rect.height.baseVal.value;
+      const bbox = content.getBBox();
+      const idealTop = (cardHeight - bbox.height) / 2;
+      const clampedTop = Math.max(CONTENT_TOP_RESERVE, idealTop);
+      const delta = clampedTop - bbox.y;
+      if (Math.abs(delta) > 0.5) {
+        content.setAttribute("transform", `translate(0, ${delta})`);
+      }
+    }
+  }
+
+  // webview/src/panzoom.ts
+  var MIN_SCALE = 0.1;
+  var MAX_SCALE = 4;
+  var WHEEL_ZOOM_INTENSITY = 15e-4;
+  function applyTransform(viewport, t) {
+    viewport.setAttribute("transform", `translate(${t.tx}, ${t.ty}) scale(${t.scale})`);
+  }
+  function clampScale(scale) {
+    return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+  }
+  function attachPanZoom(svgRoot, viewportGroup, initialTransform) {
+    let transform = initialTransform ? { ...initialTransform } : { scale: 1, tx: 0, ty: 0 };
+    if (initialTransform) {
+      applyTransform(viewportGroup, transform);
+    }
+    let isPanning = false;
+    let lastPointer = { x: 0, y: 0 };
+    function clientToSvgPoint(clientX, clientY) {
+      const rect = svgRoot.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    function onPointerDown(event) {
+      isPanning = true;
+      lastPointer = { x: event.clientX, y: event.clientY };
+      svgRoot.setPointerCapture(event.pointerId);
+    }
+    function onPointerMove(event) {
+      if (!isPanning) {
+        return;
+      }
+      const dx = event.clientX - lastPointer.x;
+      const dy = event.clientY - lastPointer.y;
+      lastPointer = { x: event.clientX, y: event.clientY };
+      transform = { ...transform, tx: transform.tx + dx, ty: transform.ty + dy };
+      applyTransform(viewportGroup, transform);
+    }
+    function onPointerUp(event) {
+      isPanning = false;
+      if (svgRoot.hasPointerCapture(event.pointerId)) {
+        svgRoot.releasePointerCapture(event.pointerId);
+      }
+    }
+    function onWheel(event) {
+      event.preventDefault();
+      const cursor = clientToSvgPoint(event.clientX, event.clientY);
+      const worldX = (cursor.x - transform.tx) / transform.scale;
+      const worldY = (cursor.y - transform.ty) / transform.scale;
+      const zoomFactor = Math.exp(-event.deltaY * WHEEL_ZOOM_INTENSITY);
+      const nextScale = clampScale(transform.scale * zoomFactor);
+      transform = {
+        scale: nextScale,
+        tx: cursor.x - worldX * nextScale,
+        ty: cursor.y - worldY * nextScale
+      };
+      applyTransform(viewportGroup, transform);
+    }
+    function reset() {
+      const bbox = viewportGroup.getBBox();
+      if (bbox.width === 0 || bbox.height === 0) {
+        transform = { scale: 1, tx: 0, ty: 0 };
+        applyTransform(viewportGroup, transform);
+        return;
+      }
+      const viewportWidth = svgRoot.clientWidth || bbox.width;
+      const viewportHeight = svgRoot.clientHeight || bbox.height;
+      const padding = 0.9;
+      const scale = clampScale(
+        Math.min(viewportWidth / bbox.width, viewportHeight / bbox.height) * padding
+      );
+      const tx = viewportWidth / 2 - (bbox.x + bbox.width / 2) * scale;
+      const ty = viewportHeight / 2 - (bbox.y + bbox.height / 2) * scale;
+      transform = { scale, tx, ty };
+      applyTransform(viewportGroup, transform);
+    }
+    svgRoot.addEventListener("pointerdown", onPointerDown);
+    svgRoot.addEventListener("pointermove", onPointerMove);
+    svgRoot.addEventListener("pointerup", onPointerUp);
+    svgRoot.addEventListener("pointercancel", onPointerUp);
+    svgRoot.addEventListener("wheel", onWheel, { passive: false });
+    return { reset, getTransform: () => ({ ...transform }) };
+  }
+
+  // webview/src/main.ts
+  function isIncomingMessage(value) {
+    return typeof value === "object" && value !== null && "type" in value && (value.type === "graph" || value.type === "error");
+  }
+  var vscode = acquireVsCodeApi();
+  var app = document.createElement("div");
+  app.id = "app";
+  var toolbar = document.createElement("div");
+  toolbar.className = "toolbar";
+  var searchInput = document.createElement("input");
+  searchInput.type = "text";
+  searchInput.className = "toolbar-search";
+  searchInput.placeholder = "Filter by address, type, or name...";
+  searchInput.setAttribute("aria-label", "Filter graph nodes");
+  var configToggleLabel = document.createElement("label");
+  configToggleLabel.className = "toolbar-toggle";
+  var configToggleInput = document.createElement("input");
+  configToggleInput.type = "checkbox";
+  configToggleInput.id = "show-config-nodes";
+  configToggleInput.checked = false;
+  configToggleLabel.setAttribute("for", "show-config-nodes");
+  configToggleLabel.appendChild(configToggleInput);
+  configToggleLabel.appendChild(document.createTextNode("Show variables, outputs & locals"));
+  var liveToggleLabel = document.createElement("label");
+  liveToggleLabel.className = "toolbar-toggle";
+  var liveToggleInput = document.createElement("input");
+  liveToggleInput.type = "checkbox";
+  liveToggleInput.id = "live-mode";
+  liveToggleInput.checked = false;
+  liveToggleLabel.setAttribute("for", "live-mode");
+  liveToggleLabel.appendChild(liveToggleInput);
+  liveToggleLabel.appendChild(document.createTextNode("Live"));
+  var fitButton = document.createElement("button");
+  fitButton.type = "button";
+  fitButton.className = "toolbar-button";
+  fitButton.textContent = "Fit to view";
+  var exportButton = document.createElement("button");
+  exportButton.type = "button";
+  exportButton.className = "toolbar-button";
+  exportButton.textContent = "Export HTML";
+  var hideToolbarButton = document.createElement("button");
+  hideToolbarButton.type = "button";
+  hideToolbarButton.className = "toolbar-button";
+  hideToolbarButton.textContent = "Hide toolbar";
+  hideToolbarButton.title = "Hide the toolbar (right-click the graph to bring it back)";
+  toolbar.appendChild(searchInput);
+  toolbar.appendChild(configToggleLabel);
+  toolbar.appendChild(liveToggleLabel);
+  toolbar.appendChild(fitButton);
+  toolbar.appendChild(exportButton);
+  toolbar.appendChild(hideToolbarButton);
+  var mainArea = document.createElement("div");
+  mainArea.className = "main-area";
+  var graphContainer = document.createElement("div");
+  graphContainer.className = "graph-container";
+  var infoPanel = document.createElement("div");
+  infoPanel.className = "info-panel";
+  infoPanel.hidden = true;
+  mainArea.appendChild(graphContainer);
+  mainArea.appendChild(infoPanel);
+  app.appendChild(toolbar);
+  app.appendChild(mainArea);
+  document.body.appendChild(app);
+  var contextMenu = document.createElement("div");
+  contextMenu.className = "context-menu";
+  contextMenu.hidden = true;
+  var contextMenuToggleItem = document.createElement("button");
+  contextMenuToggleItem.type = "button";
+  contextMenuToggleItem.className = "context-menu-item";
+  contextMenu.appendChild(contextMenuToggleItem);
+  document.body.appendChild(contextMenu);
+  function setToolbarHidden(hidden) {
+    toolbar.hidden = hidden;
+    contextMenuToggleItem.textContent = hidden ? "Show toolbar" : "Hide toolbar";
+    vscode.setState?.({ ...vscode.getState?.(), toolbarHidden: hidden });
+  }
+  setToolbarHidden(vscode.getState?.()?.toolbarHidden ?? true);
+  var latestModel = null;
+  var panZoom = null;
+  var positionOverrides = /* @__PURE__ */ new Map();
+  function nodeMatchesSearch(node, query) {
+    if (query === "") {
+      return true;
+    }
+    const haystack = `${node.address} ${node.type} ${node.name}`.toLowerCase();
+    return haystack.includes(query);
+  }
+  function filterModel(model) {
+    const query = searchInput.value.trim().toLowerCase();
+    const visibleNodes = model.nodes.filter((node) => {
+      if (isConfigKind(node.kind)) {
+        return false;
+      }
+      return nodeMatchesSearch(node, query);
+    });
+    const visibleAddresses = new Set(visibleNodes.map((n) => n.address));
+    const visibleEdges = model.edges.filter(
+      (edge) => visibleAddresses.has(edge.from) && visibleAddresses.has(edge.to)
+    );
+    return { nodes: visibleNodes, edges: visibleEdges, addressLocations: model.addressLocations };
+  }
+  function buildVariablesByAddress(model) {
+    const map = /* @__PURE__ */ new Map();
+    for (const node of model.nodes) {
+      if (node.kind === "variable") {
+        map.set(node.address, node);
+      }
+    }
+    return map;
+  }
+  function buildInfoSection(title, kind, model, query) {
+    const rows = model.nodes.filter((node) => node.kind === kind && nodeMatchesSearch(node, query));
+    if (rows.length === 0) {
+      return null;
+    }
+    const section = document.createElement("section");
+    section.className = "info-section";
+    const heading = document.createElement("h2");
+    heading.className = "info-section-title";
+    heading.textContent = title;
+    section.appendChild(heading);
+    const list = document.createElement("div");
+    list.className = "info-section-list";
+    for (const node of rows) {
+      const detail = pickNodeDetail(node);
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "info-row";
+      row.title = node.address;
+      const nameEl = document.createElement("span");
+      nameEl.className = "info-row-name";
+      nameEl.textContent = node.name;
+      row.appendChild(nameEl);
+      if (detail) {
+        const detailEl = document.createElement("span");
+        detailEl.className = "info-row-detail";
+        detailEl.textContent = detail;
+        row.appendChild(detailEl);
+      }
+      row.addEventListener("click", () => {
+        vscode.postMessage({ type: "navigate", address: node.address });
+      });
+      list.appendChild(row);
+    }
+    section.appendChild(list);
+    return section;
+  }
+  function renderInfoPanel() {
+    infoPanel.innerHTML = "";
+    if (!latestModel || !configToggleInput.checked) {
+      infoPanel.hidden = true;
+      return;
+    }
+    const query = searchInput.value.trim().toLowerCase();
+    const sections = [
+      buildInfoSection("Resources", "resource", latestModel, query),
+      buildInfoSection("Data Sources", "data", latestModel, query),
+      buildInfoSection("Modules", "module", latestModel, query),
+      buildInfoSection("Variables", "variable", latestModel, query),
+      buildInfoSection("Outputs", "output", latestModel, query),
+      buildInfoSection("Locals", "locals", latestModel, query)
+    ].filter((section) => section !== null);
+    if (sections.length === 0) {
+      infoPanel.hidden = true;
+      return;
+    }
+    infoPanel.hidden = false;
+    for (const section of sections) {
+      infoPanel.appendChild(section);
+    }
+  }
+  function showError(message) {
+    graphContainer.innerHTML = "";
+    infoPanel.innerHTML = "";
+    infoPanel.hidden = true;
+    const errorEl = document.createElement("div");
+    errorEl.className = "error-state";
+    errorEl.textContent = message;
+    graphContainer.appendChild(errorEl);
+  }
+  function rerender(options) {
+    if (!latestModel) {
+      return;
+    }
+    const previousTransform = panZoom?.getTransform();
+    const filtered = filterModel(latestModel);
+    const showConfig = configToggleInput.checked;
+    const variablesByAddress = showConfig ? buildVariablesByAddress(latestModel) : void 0;
+    const positioned = computeLayout(filtered, {
+      ...variablesByAddress ? { variablesByAddress } : {},
+      positionOverrides
+    });
+    renderGraph(
+      graphContainer,
+      positioned,
+      (address) => {
+        vscode.postMessage({ type: "navigate", address });
+      },
+      (address, x2, y) => {
+        positionOverrides.set(address, { x: x2, y });
+        rerender({ resetView: false });
+        vscode.postMessage({
+          type: "positionsChanged",
+          positions: Object.fromEntries(positionOverrides)
+        });
+      }
+    );
+    renderInfoPanel();
+    const svg = graphContainer.querySelector("svg.graph-svg");
+    const viewport = graphContainer.querySelector("#viewport");
+    if (svg && viewport) {
+      const shouldResetView = options?.resetView !== false;
+      panZoom = attachPanZoom(svg, viewport, shouldResetView ? void 0 : previousTransform);
+      if (shouldResetView) {
+        panZoom.reset();
+      }
+    } else {
+      panZoom = null;
+    }
+  }
+  var THEME_CSS_CUSTOM_PROPERTIES = [
+    "--tf-accent-config",
+    "--tf-accent-module",
+    "--tf-accent-primary",
+    "--vscode-button-background",
+    "--vscode-button-border",
+    "--vscode-button-foreground",
+    "--vscode-button-hoverBackground",
+    "--vscode-button-secondaryBackground",
+    "--vscode-button-secondaryForeground",
+    "--vscode-button-secondaryHoverBackground",
+    "--vscode-charts-blue",
+    "--vscode-charts-orange",
+    "--vscode-charts-purple",
+    "--vscode-checkbox-background",
+    "--vscode-checkbox-border",
+    "--vscode-descriptionForeground",
+    "--vscode-editor-background",
+    "--vscode-editor-font-family",
+    "--vscode-editor-foreground",
+    "--vscode-editor-inactiveSelectionBackground",
+    "--vscode-editorLineNumber-foreground",
+    "--vscode-errorForeground",
+    "--vscode-focusBorder",
+    "--vscode-font-family",
+    "--vscode-font-size",
+    "--vscode-input-background",
+    "--vscode-input-border",
+    "--vscode-input-foreground",
+    "--vscode-input-placeholderForeground",
+    "--vscode-panel-border",
+    "--vscode-statusBarItem-remoteBackground",
+    "--vscode-textLink-foreground",
+    "--vscode-widget-shadow"
+  ];
+  function gatherResolvedColors() {
+    const computed = getComputedStyle(document.documentElement);
+    const resolved = {};
+    for (const name of THEME_CSS_CUSTOM_PROPERTIES) {
+      const value = computed.getPropertyValue(name).trim();
+      if (value !== "") {
+        resolved[name] = value;
+      }
+    }
+    return resolved;
+  }
+  window.addEventListener("message", (event) => {
+    const message = event.data;
+    if (!isIncomingMessage(message)) {
+      return;
+    }
+    if (message.type === "error") {
+      latestModel = null;
+      showError(message.message);
+      return;
+    }
+    latestModel = message.payload;
+    positionOverrides = new Map(Object.entries(message.positions ?? {}));
+    rerender();
+  });
+  hideToolbarButton.addEventListener("click", () => setToolbarHidden(true));
+  function closeContextMenu() {
+    contextMenu.hidden = true;
+  }
+  contextMenuToggleItem.addEventListener("click", () => {
+    setToolbarHidden(!toolbar.hidden);
+    closeContextMenu();
+  });
+  mainArea.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    contextMenuToggleItem.textContent = toolbar.hidden ? "Show toolbar" : "Hide toolbar";
+    contextMenu.style.left = `${event.clientX}px`;
+    contextMenu.style.top = `${event.clientY}px`;
+    contextMenu.hidden = false;
+  });
+  window.addEventListener("click", (event) => {
+    if (!contextMenu.hidden && !contextMenu.contains(event.target)) {
+      closeContextMenu();
+    }
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeContextMenu();
+    }
+  });
+  window.addEventListener("blur", closeContextMenu);
+  searchInput.addEventListener("input", () => rerender());
+  configToggleInput.addEventListener("change", () => rerender());
+  liveToggleInput.addEventListener("change", () => {
+    vscode.postMessage({ type: "setLiveMode", enabled: liveToggleInput.checked });
+  });
+  fitButton.addEventListener("click", () => {
+    panZoom?.reset();
+  });
+  exportButton.addEventListener("click", () => {
+    if (!latestModel) {
+      return;
+    }
+    vscode.postMessage({
+      type: "exportHtml",
+      model: latestModel,
+      positions: Object.fromEntries(positionOverrides),
+      resolvedColors: gatherResolvedColors(),
+      toggleOn: configToggleInput.checked
+    });
+  });
+  var resizeDebounceHandle;
+  var graphResizeObserver = new ResizeObserver(() => {
+    if (resizeDebounceHandle !== void 0) {
+      window.clearTimeout(resizeDebounceHandle);
+    }
+    resizeDebounceHandle = window.setTimeout(() => {
+      resizeDebounceHandle = void 0;
+      panZoom?.reset();
+    }, 150);
+  });
+  graphResizeObserver.observe(graphContainer);
+  vscode.postMessage({ type: "ready" });
+})();
+/*! Bundled license information:
+
+@dagrejs/dagre/dist/dagre.esm.js:
+  (*! For license information please see dagre.esm.js.LEGAL.txt *)
+*/
+//# sourceMappingURL=webview.js.map
+
+  </script>
+  <script>
+    // Real captured GraphModel/positions - by the time this script tag
+    // runs, the previous script tag's top-level code (including its own
+    // window.addEventListener('message', ...) call) has already finished
+    // executing, since classic script tags run synchronously in document
+    // order - so posting here is safe and will always be handled, no race
+    // with main.ts's own 'ready' postMessage (same reasoning as
+    // webview/dev-preview.html).
+    var GRAPH_MODEL = {"nodes":[{"address":"azurerm_databricks_workspace.db_workspace","type":"azurerm_databricks_workspace","name":"db_workspace","module":"root","kind":"resource","attributes":{"sku":"standard","no_public_ip":"true"},"referencedVariables":[]},{"address":"databricks_metastore.metastore","type":"databricks_metastore","name":"metastore","module":"root","kind":"resource","attributes":{"force_destroy":"true"},"referencedVariables":[]},{"address":"databricks_catalog.dev_catalog","type":"databricks_catalog","name":"dev_catalog","module":"root","kind":"resource","attributes":{"name":"dev_catalog","comment":"Catálogo principal focado em desenvolvimento"},"referencedVariables":[]},{"address":"databricks_schema.student_schema","type":"databricks_schema","name":"student_schema","module":"root","kind":"resource","attributes":{"name":"student","comment":"Schema estruturado para auditoria de alunos"},"referencedVariables":[]},{"address":"databricks_schema.course_schema","type":"databricks_schema","name":"course_schema","module":"root","kind":"resource","attributes":{"name":"course","comment":"Schema estruturado para auditoria de cursos"},"referencedVariables":[]},{"address":"databricks_cluster.single_node","type":"databricks_cluster","name":"single_node","module":"root","kind":"resource","attributes":{"cluster_name":"cls-single-node-lowcost","spark_version":"14.3.x-scala2.12","node_type_id":"Standard_DS3_v2","data_security_mode":"USER_ISOLATION"},"referencedVariables":["var.autotermination_minutes"]},{"address":"databricks_job.pipeline_automatizado","type":"databricks_job","name":"pipeline_automatizado","module":"root","kind":"resource","attributes":{"name":"Job-Auditoria-Sequencial-Com-Requirements","task_key":"1_Verificar_Status_Carga","python_file":"dashboard_consulta.py","url":"https://github.com","provider":"gitHub","branch":"main","requirements":"requirements.txt"},"referencedVariables":[]},{"address":"databricks_job.pipeline_estudantes","type":"databricks_job","name":"pipeline_estudantes","module":"root","kind":"resource","attributes":{"name":"Pipeline-Automatizado-Alunos-Cursos","max_concurrent_runs":"1","task_key":"Carga_Dados_Estudantes"},"referencedVariables":[]},{"address":"local.env","type":"","name":"env","module":"root","kind":"locals","attributes":{"env":"dev"},"referencedVariables":[]},{"address":"local.project_name","type":"","name":"project_name","module":"root","kind":"locals","attributes":{"project_name":"dbx-lowcost"},"referencedVariables":[]},{"address":"local.resource_prefix","type":"","name":"resource_prefix","module":"root","kind":"locals","attributes":{},"referencedVariables":[]},{"address":"local.settings","type":"","name":"settings","module":"root","kind":"locals","attributes":{},"referencedVariables":[]},{"address":"local.enable_cluster","type":"","name":"enable_cluster","module":"root","kind":"locals","attributes":{},"referencedVariables":[]},{"address":"local.global_tags","type":"","name":"global_tags","module":"root","kind":"locals","attributes":{},"referencedVariables":[]},{"address":"azurerm_resource_group.rg","type":"azurerm_resource_group","name":"rg","module":"root","kind":"resource","attributes":{},"referencedVariables":["var.location"]},{"address":"azurerm_log_analytics_workspace.law","type":"azurerm_log_analytics_workspace","name":"law","module":"root","kind":"resource","attributes":{"sku":"PerGB2018","retention_in_days":"30"},"referencedVariables":[]},{"address":"azurerm_monitor_diagnostic_setting.dbx_telemetry","type":"azurerm_monitor_diagnostic_setting","name":"dbx_telemetry","module":"root","kind":"resource","attributes":{"category":"AllMetrics","enabled":"true"},"referencedVariables":[]},{"address":"azurerm_virtual_network.vnet","type":"azurerm_virtual_network","name":"vnet","module":"root","kind":"resource","attributes":{"address_space":"10.0.0.0/16"},"referencedVariables":[]},{"address":"azurerm_subnet.public_subnet","type":"azurerm_subnet","name":"public_subnet","module":"root","kind":"resource","attributes":{"address_prefixes":"10.0.1.0/24","name":"Microsoft.Databricks/workspaces","actions":"Microsoft.Network/virtualNetworks/subnets/join/action, Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"},"referencedVariables":[]},{"address":"azurerm_subnet.private_subnet","type":"azurerm_subnet","name":"private_subnet","module":"root","kind":"resource","attributes":{"address_prefixes":"10.0.2.0/24","name":"Microsoft.Databricks/workspaces","actions":"Microsoft.Network/virtualNetworks/subnets/join/action, Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action"},"referencedVariables":[]},{"address":"output.workspace_url","type":"","name":"workspace_url","module":"root","kind":"output","attributes":{"description":"URL do Workspace do Databricks criado na Azure"},"referencedVariables":[]},{"address":"output.job_id","type":"","name":"job_id","module":"root","kind":"output","attributes":{"description":"ID do Job Orquestrado Sequencial criado para as chamadas via API de Pipeline"},"referencedVariables":[]},{"address":"azurerm_network_security_group.nsg","type":"azurerm_network_security_group","name":"nsg","module":"root","kind":"resource","attributes":{},"referencedVariables":[]},{"address":"azurerm_subnet_network_security_group_association.public_assoc","type":"azurerm_subnet_network_security_group_association","name":"public_assoc","module":"root","kind":"resource","attributes":{},"referencedVariables":[]},{"address":"azurerm_subnet_network_security_group_association.private_assoc","type":"azurerm_subnet_network_security_group_association","name":"private_assoc","module":"root","kind":"resource","attributes":{},"referencedVariables":[]},{"address":"azurerm_storage_account.datalake","type":"azurerm_storage_account","name":"datalake","module":"root","kind":"resource","attributes":{"account_tier":"Standard","account_replication_type":"LRS","account_kind":"StorageV2","is_hns_enabled":"true"},"referencedVariables":[]},{"address":"azurerm_storage_container.metastore_container","type":"azurerm_storage_container","name":"metastore_container","module":"root","kind":"resource","attributes":{"name":"unity-catalog-metastore","container_access_type":"private"},"referencedVariables":[]},{"address":"var.location","type":"","name":"location","module":"root","kind":"variable","attributes":{"default":"East US","description":"Região da Azure onde os recursos serão implantados"},"referencedVariables":[]},{"address":"var.autotermination_minutes","type":"","name":"autotermination_minutes","module":"root","kind":"variable","attributes":{"default":"10","description":"Tempo de inatividade em minutos para o cluster desligar sozinho"},"referencedVariables":[]}],"edges":[{"from":"azurerm_databricks_workspace.db_workspace","to":"azurerm_resource_group.rg"},{"from":"azurerm_databricks_workspace.db_workspace","to":"azurerm_virtual_network.vnet"},{"from":"azurerm_databricks_workspace.db_workspace","to":"azurerm_subnet.public_subnet"},{"from":"azurerm_databricks_workspace.db_workspace","to":"azurerm_subnet.private_subnet"},{"from":"databricks_metastore.metastore","to":"azurerm_storage_container.metastore_container"},{"from":"databricks_metastore.metastore","to":"azurerm_storage_account.datalake"},{"from":"databricks_catalog.dev_catalog","to":"databricks_metastore.metastore"},{"from":"databricks_schema.student_schema","to":"databricks_catalog.dev_catalog"},{"from":"databricks_schema.course_schema","to":"databricks_catalog.dev_catalog"},{"from":"databricks_job.pipeline_automatizado","to":"databricks_cluster.single_node"},{"from":"azurerm_log_analytics_workspace.law","to":"azurerm_resource_group.rg"},{"from":"azurerm_monitor_diagnostic_setting.dbx_telemetry","to":"azurerm_databricks_workspace.db_workspace"},{"from":"azurerm_monitor_diagnostic_setting.dbx_telemetry","to":"azurerm_log_analytics_workspace.law"},{"from":"azurerm_virtual_network.vnet","to":"azurerm_resource_group.rg"},{"from":"azurerm_subnet.public_subnet","to":"azurerm_resource_group.rg"},{"from":"azurerm_subnet.public_subnet","to":"azurerm_virtual_network.vnet"},{"from":"azurerm_subnet.private_subnet","to":"azurerm_resource_group.rg"},{"from":"azurerm_subnet.private_subnet","to":"azurerm_virtual_network.vnet"},{"from":"output.workspace_url","to":"azurerm_databricks_workspace.db_workspace"},{"from":"output.job_id","to":"databricks_job.pipeline_automatizado"},{"from":"azurerm_network_security_group.nsg","to":"azurerm_resource_group.rg"},{"from":"azurerm_subnet_network_security_group_association.public_assoc","to":"azurerm_subnet.public_subnet"},{"from":"azurerm_subnet_network_security_group_association.public_assoc","to":"azurerm_network_security_group.nsg"},{"from":"azurerm_subnet_network_security_group_association.private_assoc","to":"azurerm_subnet.private_subnet"},{"from":"azurerm_subnet_network_security_group_association.private_assoc","to":"azurerm_network_security_group.nsg"},{"from":"azurerm_storage_account.datalake","to":"azurerm_resource_group.rg"},{"from":"azurerm_storage_container.metastore_container","to":"azurerm_storage_account.datalake"}],"addressLocations":{"azurerm_databricks_workspace.db_workspace":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/databricks.tf","line":2},"databricks_metastore.metastore":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/databricks.tf","line":19},"databricks_catalog.dev_catalog":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/databricks.tf","line":25},"databricks_schema.student_schema":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/databricks.tf","line":31},"databricks_schema.course_schema":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/databricks.tf","line":37},"databricks_cluster.single_node":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/databricks.tf","line":44},"databricks_job.pipeline_automatizado":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/databricks.tf","line":63},"databricks_job.pipeline_estudantes":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/jobs.tf","line":2},"local.env":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/locals.tf","line":2},"local.project_name":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/locals.tf","line":3},"local.resource_prefix":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/locals.tf","line":4},"local.settings":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/locals.tf","line":7},"local.enable_cluster":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/locals.tf","line":8},"local.global_tags":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/locals.tf","line":10},"azurerm_resource_group.rg":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/main.tf","line":1},"azurerm_log_analytics_workspace.law":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/monitoring.tf","line":1},"azurerm_monitor_diagnostic_setting.dbx_telemetry":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/monitoring.tf","line":11},"azurerm_virtual_network.vnet":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/networking.tf","line":1},"azurerm_subnet.public_subnet":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/networking.tf","line":9},"azurerm_subnet.private_subnet":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/networking.tf","line":27},"output.workspace_url":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/outputs.tf","line":1},"output.job_id":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/outputs.tf","line":6},"azurerm_network_security_group.nsg":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/security.tf","line":1},"azurerm_subnet_network_security_group_association.public_assoc":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/security.tf","line":8},"azurerm_subnet_network_security_group_association.private_assoc":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/security.tf","line":13},"azurerm_storage_account.datalake":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/storage.tf","line":1},"azurerm_storage_container.metastore_container":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/storage.tf","line":13},"var.location":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/variables.tf","line":1},"var.autotermination_minutes":{"file":"/home/wsl/deploy/azure-databricks/databricks-cluster/variables.tf","line":7}}};
+    var GRAPH_POSITIONS = {};
+    window.postMessage({ type: 'graph', payload: GRAPH_MODEL, positions: GRAPH_POSITIONS }, '*');
+
+  </script>
+</body>
+</html>

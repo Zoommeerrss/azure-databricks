@@ -1,6 +1,6 @@
 resource "azurerm_network_security_group" "nsg" {
   name                = "nsg-${local.resource_prefix}"
-  location            = azurerm_network_security_group.nsg.location
+  location            = azurerm_resource_group.rg.location # <-- Corrigido aqui
   resource_group_name = azurerm_resource_group.rg.name
   tags                = local.global_tags
 }

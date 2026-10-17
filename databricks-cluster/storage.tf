@@ -12,6 +12,7 @@ resource "azurerm_storage_account" "datalake" {
 
 resource "azurerm_storage_container" "metastore_container" {
   name                  = "unity-catalog-metastore"
-  storage_account_id    = azurerm_storage_account.datalake.id
+  # CORRIGIDO: Retornado para name por conta da versão ~> 3.100 especificada no seu providers.tf
+  storage_account_name  = azurerm_storage_account.datalake.name 
   container_access_type = "private"
 }

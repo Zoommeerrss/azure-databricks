@@ -22,20 +22,20 @@ resource "databricks_metastore" "metastore" {
   force_destroy = true
 }
 
-resource "databricks_catalog" "dev_catalog" {
+resource "databricks_catalog" "environment_catalog" {
   metastore_id = databricks_metastore.metastore.id
-  name         = "dev_catalog"
-  comment      = "Catálogo principal focado em desenvolvimento"
+  name         = "${local.env}_catalog" # <-- Corrigido: Dinâmico por ambiente (dev_catalog ou prod_catalog)
+  comment      = "Catálogo principal focado no ambiente de ${local.env}"
 }
 
 resource "databricks_schema" "student_schema" {
-  catalog_name = databricks_catalog.dev_catalog.name
+  catalog_name = databricks_catalog.environment_catalog.name
   name         = "student"
   comment      = "Schema estruturado para auditoria de alunos"
 }
 
 resource "databricks_schema" "course_schema" {
-  catalog_name = databricks_catalog.dev_catalog.name
+  catalog_name = databricks_catalog.environment_catalog.name
   name         = "course"
   comment      = "Schema estruturado para auditoria de cursos"
 }
@@ -47,7 +47,7 @@ resource "databricks_cluster" "single_node" {
   spark_version           = "14.3.x-scala2.12"
   node_type_id            = "Standard_DS3_v2"
   autotermination_minutes = var.autotermination_minutes
-  data_security_mode      = "USER_ISOLATION" # Requisito mandatório para conformidade com Unity Catalog
+  data_security_mode      = "USER_ISOLATION" 
 
   spark_conf = {
     "spark.databricks.cluster.profile" : "singleNode"
@@ -59,9 +59,16 @@ resource "databricks_cluster" "single_node" {
   }
 }
 
-# 4. Job Orquestrado Sequencial (Desacoplado - Clone via Runtime Task)
+# 4. Job Orquestrado Sequencial (Multi-Ambiente)
 resource "databricks_job" "pipeline_automatizado" {
-  name = "Job-Auditoria-Sequencial-Com-Requirements"
+  name = "Job-Auditoria-Sequencial-Com-Requirements-${local.env}"
+
+  git_source {
+    # IMPORTANTE: Lembre-se de preencher com a URL completa do seu repositório aqui
+    url      = "https://github.com"
+    provider = "gitHub"
+    branch   = var.git_branch  
+  }
 
   # ----------------------------------------------------------------------------
   # TAREFA 1: Verificação da Carga (Gatilho Inicial)
@@ -71,19 +78,15 @@ resource "databricks_job" "pipeline_automatizado" {
 
     spark_python_task {
       python_file = "check_carga.py" 
-    }
-
-    git_source {
-      url      = "https://github.com"
-      provider = "gitHub"
-      branch   = "main"
+      source      = "GIT"
     }
 
     library {
       requirements = "requirements.txt"
     }
 
-    existing_cluster_id = local.enable_cluster ? databricks_cluster.single_node.id : null
+    # Corrigido: Adicionado o índice [0] exigido pelo bloco 'count' do Terraform
+    existing_cluster_id = local.enable_cluster ? databricks_cluster.single_node[0].id : null
   }
 
   # ----------------------------------------------------------------------------
@@ -98,18 +101,14 @@ resource "databricks_job" "pipeline_automatizado" {
 
     spark_python_task {
       python_file = "dashboard_consulta.py"
-    }
-
-    git_source {
-      url      = "https://github.com"
-      provider = "gitHub"
-      branch   = "main"
+      source      = "GIT"
     }
 
     library {
       requirements = "requirements.txt"
     }
 
-    existing_cluster_id = local.enable_cluster ? databricks_cluster.single_node.id : null
+    # Corrigido: Adicionado o índice [0] exigido pelo bloco 'count' do Terraform
+    existing_cluster_id = local.enable_cluster ? databricks_cluster.single_node[0].id : null
   }
 }

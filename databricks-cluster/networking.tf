@@ -10,7 +10,8 @@ resource "azurerm_subnet" "public_subnet" {
   name                 = "sub-public-${local.resource_prefix}"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
+  # Alterado de /24 para /22 para suportar o crescimento seguro do cluster Spark
+  address_prefixes     = ["10.0.4.0/22"] 
 
   delegation {
     name = "databricks-del-public"
@@ -28,7 +29,8 @@ resource "azurerm_subnet" "private_subnet" {
   name                 = "sub-private-${local.resource_prefix}"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.2.0/24"]
+  # Alterado de /24 para /22 para garantir IPs suficientes para os nós Workers privados
+  address_prefixes     = ["10.0.8.0/22"]
 
   delegation {
     name = "databricks-del-private"
