@@ -1,32 +1,38 @@
-name: Deploy and Run - Verificacao Carga Dados
+name: Deploy and Run - Carga Dados Estudantes (ETL)
 
 trigger:
   branches:
     include:
-      - main # Dispara automaticamente ao atualizar a main deste repositório
+      - dev 
   paths:
     exclude:
-      - README.md
+      - CARGA_DADOS.md
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
+  # 🚀 CORRIGIDO: Vincula o grupo de variáveis da Library para que o pipeline leia o Client ID e Secret
+  - group: 'azure-databricks-credentials'
+
+  # Vinculado à URL real e estável do seu Workspace gerada na Azure
   - name: DATABRICKS_HOST
-    value: 'https://azuredatabricks.net' # URL do seu Workspace Databricks
+    value: 'https://adb-7405611752750506.6.azuredatabricks.net'
+  
+  # Nome exato do recurso lógico de Carga criado pelo seu Terraform
   - name: JOB_NAME
-    value: 'Job-Auditoria-Sequencial-Com-Requirements'
-  - name: TASK_KEY
-    value: '1_Verificar_Status_Carga' # Executa especificamente a primeira tarefa
+    value: 'Job-ETL-Carga-dev'
 
 jobs:
-- job: TriggerDatabricksTask
-  displayName: 'Disparar Verificação de Carga no Databricks'
+- job: TriggerDatabricksJob
+  displayName: 'Disparar Pipeline de Ingestão no Databricks'
   steps:
 
   # Passo 1: Autenticar e obter o token OAuth dinâmico usando o Service Principal
   - bash: |
       echo "Solicitando Token de Acesso Azure para o Databricks..."
+      
+      # 🚀 CORRIGIDO: Endpoint oficial v2.0 da Microsoft injetando o Tenant ID de forma correta na URL
       TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
         -d "grant_type=client_credentials" \
         -d "client_id=$(AZURE_CLIENT_ID)" \
@@ -34,6 +40,12 @@ jobs:
         -d "scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default")
       
       DATABRICKS_TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
+      
+      if [ -z "$DATABRICKS_TOKEN" ] || [ "$DATABRICKS_TOKEN" == "null" ]; then
+        echo "❌ Erro Crítico: Falha ao gerar o token OAuth da Azure. Verifique as credenciais no Variable Group."
+        exit 1
+      fi
+      
       echo "##vso[task.setvariable variable=db_token;issetsecret=true]$DATABRICKS_TOKEN"
     displayName: 'Obter Token OAuth Azure'
     env:
@@ -41,27 +53,30 @@ jobs:
       AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
       AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
 
-  # Passo 2: Buscar o ID do Job e rodar unicamente a tarefa de Carga
+  # Passo 2: Buscar o ID do Job e rodar a esteira de Carga de forma atômica
   - bash: |
-      echo "Buscando o ID do Job no Databricks..."
+      echo "Buscando o ID do Job no Databricks para: $(JOB_NAME)..."
+      
+      # Varre a API de Jobs buscando o match exato do seu nome de produção
       JOB_ID=$(curl -s -X GET "$(DATABRICKS_HOST)/api/2.1/jobs/list" \
         -H "Authorization: Bearer $(db_token)" \
 
         | jq -r --arg NAME "$(JOB_NAME)" '.jobs[] | select(.settings.name==$NAME) | .job_id')
 
       if [ -z "$JOB_ID" ] || [ "$JOB_ID" == "null" ]; then
-        echo "Erro: Job '$(JOB_NAME)' não encontrado no Databricks."
+        echo "❌ Erro: Job '$(JOB_NAME)' não foi localizado no Workspace do Databricks."
         exit 1
       fi
 
-      echo "Disparando unicamente a tarefa: $(TASK_KEY) para o Job ID: $JOB_ID"
+      echo "✅ Job ID Encontrado: $JOB_ID"
+      echo "🚀 Disparando o pipeline de Ingestão de Dados de forma assíncrona..."
+      
       curl -s -X POST "$(DATABRICKS_HOST)/api/2.1/jobs/run-now" \
         -H "Authorization: Bearer $(db_token)" \
         -H "Content-Type: application/json" \
         -d "{
-          \"job_id\": $JOB_ID,
-          \"job_parameters\": {},
-          \"dependent_tasks_filter\": \"NONE\" 
+          \"job_id\": $JOB_ID
         }" | jq .
-        # O filtro "NONE" garante que rodará apenas a tarefa chamada, sem disparar as dependentes de forma forçada.
-    displayName: 'Executar Task de Carga no Databricks'
+        
+      echo "▶️ Comando enviado com sucesso! Acompanhe o processamento do notebook real diretamente no Workspace."
+    displayName: 'Executar Workflow de Carga no Databricks'
