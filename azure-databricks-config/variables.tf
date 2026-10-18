@@ -1,8 +1,3 @@
-variable "databricks_workspace_url" {
-  type        = string
-  description = "A URL de acesso ao Workspace Databricks criada pelo projeto anterior"
-}
-
 variable "environment" {
   type        = string
   description = "Ambiente atual de execução (dev ou main)"
@@ -11,6 +6,11 @@ variable "environment" {
 variable "git_branch" {
   type        = string
   description = "A branch do repositório Git que o job deve clonar dinamicamente (dev ou main)"
+}
+
+variable "databricks_catalog_name" {
+  type        = string
+  description = "O nome exato do catálogo padrão criado automaticamente pelo Workspace"
 }
 
 variable "autotermination_minutes" {

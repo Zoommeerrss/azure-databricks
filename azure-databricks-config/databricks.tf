@@ -1,30 +1,32 @@
 # ==============================================================================
-# 1. ESTRUTURA DO UNITY CATALOG
+# 1. REFERÊNCIA AO UNITY CATALOG EXISTENTE (Data Source Direto)
 # ==============================================================================
-resource "databricks_catalog" "environment_catalog" {
-  name           = "${var.environment}_catalog" 
-  comment        = "Catálogo principal focado no ambiente de ${var.environment}"
-  isolation_mode = "ISOLATED"
+# 🚀 AUTOMÁTICO: Lê o catálogo direto do valor configurado no seu locals.tf
+data "databricks_catalog" "environment_catalog" {
+  name = local.databricks_catalog_name
 }
 
 resource "databricks_schema" "student_schema" {
-  catalog_name = databricks_catalog.environment_catalog.name
+  catalog_name = data.databricks_catalog.environment_catalog.name
   name         = "student"
 }
 
 resource "databricks_schema" "course_schema" {
-  catalog_name = databricks_catalog.environment_catalog.name
+  catalog_name = data.databricks_catalog.environment_catalog.name
   name         = "course"
 }
 
+
 # ==============================================================================
-# 2. CLUSTER INTERATIVO OPCIONAL (Apenas para Desenvolvimento Manual/Ad-hoc)
+# 2. CLUSTER INTERATIVO OPCIONAL (Ajustado para contornar Cota da Azure)
 # ==============================================================================
 resource "databricks_cluster" "single_node" {
   count                   = local.enable_cluster ? 1 : 0
   cluster_name            = "cls-single-node-interactive"
   spark_version           = "14.3.x-scala2.12"
-  node_type_id            = "Standard_D4s_v5" 
+  
+  # 🚀 SOLUÇÃO DA COTA: SKU F4s_v2 que passa pelas restrições da sua assinatura
+  node_type_id            = "Standard_F4s_v2" 
   autotermination_minutes = var.autotermination_minutes
   data_security_mode      = "USER_ISOLATION" 
 
@@ -33,7 +35,6 @@ resource "databricks_cluster" "single_node" {
   }
 
   spark_conf = {
-    "spark.databricks.cluster.profile" : "singleNode"
     "spark.master" : "local[*]"
   }
 }
@@ -44,9 +45,8 @@ resource "databricks_cluster" "single_node" {
 resource "databricks_job" "job_carga" {
   name = "Job-ETL-Carga-${var.environment}"
 
-  # 🔥 CORRIGIDO: O bloco git_source fica no nível global do Job conforme exigido pelo provider
   git_source {
-    url      = "https://github.com" # ⚠️ Sua URL real de Carga
+    url      = "https://github.com" # ⚠️ Insira sua URL real de Carga
     provider = "gitHub"
     branch   = var.git_branch
   }
@@ -63,11 +63,11 @@ resource "databricks_job" "job_carga" {
       requirements = "requirements.txt"
     }
 
+    # 🚀 CORRIGIDO: Alterado para Standard_F4s_v2 para evitar o erro de QuotaExceeded do Azure
     new_cluster {
       spark_version = "14.3.x-scala2.12"
-      node_type_id  = "Standard_D4s_v5"
+      node_type_id  = "Standard_F4s_v2"
       spark_conf = {
-        "spark.databricks.cluster.profile" : "singleNode"
         "spark.master" : "local[*]"
       }
       azure_attributes {
@@ -83,9 +83,8 @@ resource "databricks_job" "job_carga" {
 resource "databricks_job" "job_consulta" {
   name = "Job-Analitico-Consulta-${var.environment}"
 
-  # 🔥 CORRIGIDO: git_source global isolado para o repositório de consulta
   git_source {
-    url      = "https://github.com" # ⚠️ Sua URL real de Consulta
+    url      = "https://github.com" # ⚠️ Insira sua URL real de Consulta
     provider = "gitHub"
     branch   = var.git_branch
   }
@@ -102,11 +101,11 @@ resource "databricks_job" "job_consulta" {
       requirements = "requirements.txt"
     }
 
+    # 🚀 CORRIGIDO: Alterado para Standard_F4s_v2 para evitar o erro de QuotaExceeded do Azure
     new_cluster {
       spark_version = "14.3.x-scala2.12"
-      node_type_id  = "Standard_D4s_v5"
+      node_type_id  = "Standard_F4s_v2"
       spark_conf = {
-        "spark.databricks.cluster.profile" : "singleNode"
         "spark.master" : "local[*]"
       }
       azure_attributes {

@@ -5,9 +5,8 @@ resource "databricks_job" "pipeline_carga" {
   name                = "Pipeline-Automatizado-Carga-${var.environment}"
   max_concurrent_runs = 1
 
-  # 🔥 REPOSITÓRIO ISOLADO 1: Aponta estritamente para o projeto-carga-dados
   git_source {
-    url      = "https://github.com" # ⚠️ Insira sua URL real
+    url      = "https://github.com" # ⚠️ Sua URL real de Carga
     provider = "gitHub"
     branch   = var.git_branch
   }
@@ -15,7 +14,6 @@ resource "databricks_job" "pipeline_carga" {
   task {
     task_key = "Carga_Dados_Estudantes"
 
-    # 🔥 CORRIGIDO: Alterado para notebook real (.ipynb) no padrão nb_
     notebook_task {
       notebook_path = "nb_carga_dados.ipynb" 
       source        = "GIT"
@@ -25,7 +23,7 @@ resource "databricks_job" "pipeline_carga" {
       requirements = "requirements.txt"
     }
 
-    # Mantém a sua excelente inteligência dinâmica do arquivo YAML de configurações
+    # 🔥 CORRIGIDO: Adicionado o índice [0] para casar com o recurso interativo criado com count
     existing_cluster_id = local.enable_cluster ? databricks_cluster.single_node[0].id : null
   }
 
@@ -39,9 +37,8 @@ resource "databricks_job" "pipeline_consulta" {
   name                = "Pipeline-Automatizado-Consulta-${var.environment}"
   max_concurrent_runs = 1
 
-  # 🔥 REPOSITÓRIO ISOLADO 2: Aponta estritamente para o projeto-consulta-dados
   git_source {
-    url      = "https://github.com" # ⚠️ Insira sua URL real
+    url      = "https://github.com" # ⚠️ Sua URL real de Consulta
     provider = "gitHub"
     branch   = var.git_branch
   }
@@ -49,7 +46,6 @@ resource "databricks_job" "pipeline_consulta" {
   task {
     task_key = "Consulta_Dashboard"
 
-    # 🔥 CORRIGIDO: Alterado para notebook real (.ipynb) no padrão nb_
     notebook_task {
       notebook_path = "nb_consulta_dashboard.ipynb"
       source        = "GIT"
@@ -59,6 +55,7 @@ resource "databricks_job" "pipeline_consulta" {
       requirements = "requirements.txt"
     }
 
+    # 🔥 CORRIGIDO: Adicionado o índice [0] para casar com o recurso interativo criado com count
     existing_cluster_id = local.enable_cluster ? databricks_cluster.single_node[0].id : null
   }
 

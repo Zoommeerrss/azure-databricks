@@ -3,7 +3,7 @@
 
 provider "registry.terraform.io/databricks/databricks" {
   version     = "1.137.0"
-  constraints = "~> 1.40"
+  constraints = "~> 1.0"
   hashes = [
     "h1:8nkgz1JYA9J2jer0fjJj6vDMuHfhdehtOjF314WbYO4=",
     "zh:17262dad158363e64fbcfe2a7a7273235c8377b1777be00d7192125cbe55efc5",
@@ -17,7 +17,7 @@ provider "registry.terraform.io/databricks/databricks" {
 
 provider "registry.terraform.io/hashicorp/azurerm" {
   version     = "3.117.1"
-  constraints = "~> 3.100"
+  constraints = "~> 3.0"
   hashes = [
     "h1:3c9iOEtBMnHrpJLlhbQ0sCZPWhE/2dvEPcL8KkXAh7w=",
     "zh:0c513676836e3c50d004ece7d2624a8aff6faac14b833b96feeac2e4bc2c1c12",
