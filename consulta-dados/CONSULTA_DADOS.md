@@ -16,7 +16,7 @@ projeto-consulta-dados/
 ├── azure-pipelines.yml      # Pipeline de CI/CD isolada no Azure DevOps
 ├── dashboard_consulta.py    # Script analítico em Python/Spark (Executado no Databricks)
 ├── requirements.txt         # Bibliotecas de visualização e análise exclusivas deste projeto
-└── README.md                # Documentação técnica do projeto
+└── CONSULTA_DADOS.md                # Documentação técnica do projeto
 ```
 
 ---

@@ -1,6 +1,6 @@
 variable "location" {
   type        = string
-  default     = "East US"
+  default     = "eastus" # 🔥 AJUSTADO: Formato padrão 'eastus' sem espaços (evita quebras em concatenações)
   description = "Região da Azure onde os recursos serão implantados"
 }
 
@@ -24,12 +24,6 @@ variable "autotermination_minutes" {
   type        = number
   default     = 10
   description = "Tempo de inatividade em minutos para o cluster desligar sozinho"
-}
-
-variable "force_enable_cluster" {
-  type        = bool
-  default     = true
-  description = "Força a criação do cluster mesmo se o ambiente for dev (útil para testes)"
 }
 
 variable "databricks_metastore_id" {

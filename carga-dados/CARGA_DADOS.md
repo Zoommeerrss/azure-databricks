@@ -16,7 +16,7 @@ projeto-carga-dados/
 ├── azure-pipelines.yml   # Pipeline de CI/CD isolada para o Azure DevOps
 ├── check_carga.py        # Script principal em Python/Spark SQL (Executado no Databricks)
 ├── requirements.txt      # Dependências Python exclusivas deste contexto de negócio
-└── README.md             # Documentação técnica do projeto
+└── CARGA_DADOS.md             # Documentação técnica do projeto
 ```
 
 ---
