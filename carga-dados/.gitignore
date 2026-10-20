@@ -50,3 +50,9 @@ venv.bak/
 *.log
 .databricks/
 .dbc/
+
+# exceptions because the deploy config
+!dev.tfvars
+!prod.tfvars
+!envs/dev.tfvars
+!envs/prod.tfvars

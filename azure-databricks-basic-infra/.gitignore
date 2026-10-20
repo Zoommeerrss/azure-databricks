@@ -10,6 +10,12 @@
 *.tfvars.json
 .env
 
+# exceptions because the deploy config
+!dev.tfvars
+!prod.tfvars
+!envs/dev.tfvars
+!envs/prod.tfvars
+
 # Arquivos de log do Terraform
 *.log
 crash.log
