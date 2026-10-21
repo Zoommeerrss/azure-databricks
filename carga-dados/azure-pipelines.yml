@@ -4,6 +4,7 @@ trigger:
   branches:
     include:
       - dev 
+      - main
   paths:
     exclude:
       - CARGA_DADOS.md
@@ -12,27 +13,58 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  # 🚀 CORRIGIDO: Vincula o grupo de variáveis da Library para que o pipeline leia o Client ID e Secret
+  # Vincula o grupo de variáveis da Library (Contém AZURE_TENANT_ID, CLIENT_ID e SECRET)
   - group: 'azure-databricks-credentials'
 
-  # Vinculado à URL real e estável do seu Workspace gerada na Azure
+  # Dinâmico: Define variáveis baseadas na branch que disparou o pipeline
+  - ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    - name: ENV_NAME
+      value: 'PROD'
+    - name: TF_VAR_FILE
+      value: 'prod.tfvars'
+  - ${{ if eq(variables['Build.SourceBranchName'], 'dev') }}:
+    - name: ENV_NAME
+      value: 'DEV'
+    - name: TF_VAR_FILE
+      value: 'dev.tfvars'
+
+  # Vinculado à URL real do seu Workspace Databricks
   - name: DATABRICKS_HOST
-    value: 'https://adb-7405611752750506.6.azuredatabricks.net'
+    value: 'https://azuredatabricks.net'
   
-  # Nome exato do recurso lógico de Carga criado pelo seu Terraform
+  # O nome do Job que seu databricks.tf cria dinamicamente
   - name: JOB_NAME
-    value: 'Job-ETL-Carga-dev'
+    value: 'JOB_1_PIPELINE_DE_CARGA_$(ENV_NAME)'
 
 jobs:
-- job: TriggerDatabricksJob
-  displayName: 'Disparar Pipeline de Ingestão no Databricks'
+- job: DeployAndTrigger
+  displayName: 'Deploy Terraform e Disparo no Databricks'
   steps:
 
-  # Passo 1: Autenticar e obter o token OAuth dinâmico usando o Service Principal
+  # 🚀 PASSO NOVO 1: Instala o Terraform no agente do Azure DevOps
+  - task: TerraformInstaller@1
+    displayName: 'Instalar Terraform'
+    inputs:
+      terraformVersion: 'latest'
+
+  # 🚀 PASSO NOVO 2: Executa o Terraform para atualizar Notebooks, Códigos e o Job
   - bash: |
-      echo "Solicitando Token de Acesso Azure para o Databricks..."
+      echo "Iniciando o Deploy do Terraform para o ambiente $(ENV_NAME)..."
+      cd terraform
+      terraform init
+      terraform workspace select $(ENV_NAME) || terraform workspace new $(ENV_NAME)
+      terraform apply -var-file="envs/$(TF_VAR_FILE)" -auto-approve
+    displayName: 'Terraform Apply (Atualizar Código e Job)'
+    env:
+      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+      ARM_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+      ARM_TENANT_ID: $(AZURE_TENANT_ID)
+      DATABRICKS_TOKEN: $(db_token)
+
+  # Passo 3: Autentica e obter o token OAuth dinâmico para a API do Databricks
+  - bash: |
+      echo "Solicitando Token de Acesso Azure para o Databricks no ambiente $(ENV_NAME)..."
       
-      # 🚀 CORRIGIDO: Endpoint oficial v2.0 da Microsoft injetando o Tenant ID de forma correta na URL
       TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
         -d "grant_type=client_credentials" \
         -d "client_id=$(AZURE_CLIENT_ID)" \
@@ -42,22 +74,17 @@ jobs:
       DATABRICKS_TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
       
       if [ -z "$DATABRICKS_TOKEN" ] || [ "$DATABRICKS_TOKEN" == "null" ]; then
-        echo "❌ Erro Crítico: Falha ao gerar o token OAuth da Azure. Verifique as credenciais no Variable Group."
+        echo "❌ Erro Crítico: Falha ao gerar o token OAuth da Azure."
         exit 1
       fi
       
       echo "##vso[task.setvariable variable=db_token;issetsecret=true]$DATABRICKS_TOKEN"
     displayName: 'Obter Token OAuth Azure'
-    env:
-      AZURE_TENANT_ID: $(AZURE_TENANT_ID)
-      AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
-      AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
 
-  # Passo 2: Buscar o ID do Job e rodar a esteira de Carga de forma atômica
+  # Passo 4: Buscar o ID do Job (atualizado pelo Terraform) e rodar a carga
   - bash: |
       echo "Buscando o ID do Job no Databricks para: $(JOB_NAME)..."
       
-      # Varre a API de Jobs buscando o match exato do seu nome de produção
       JOB_ID=$(curl -s -X GET "$(DATABRICKS_HOST)/api/2.1/jobs/list" \
         -H "Authorization: Bearer $(db_token)" \
 
@@ -69,14 +96,12 @@ jobs:
       fi
 
       echo "✅ Job ID Encontrado: $JOB_ID"
-      echo "🚀 Disparando o pipeline de Ingestão de Dados de forma assíncrona..."
+      echo "🚀 Disparando o pipeline de Ingestão de Dados atualizado para $(ENV_NAME)..."
       
       curl -s -X POST "$(DATABRICKS_HOST)/api/2.1/jobs/run-now" \
         -H "Authorization: Bearer $(db_token)" \
         -H "Content-Type: application/json" \
-        -d "{
-          \"job_id\": $JOB_ID
-        }" | jq .
+        -d "{ \"job_id\": $JOB_ID }" | jq .
         
-      echo "▶️ Comando enviado com sucesso! Acompanhe o processamento do notebook real diretamente no Workspace."
+      echo "▶️ Comando enviado com sucesso!"
     displayName: 'Executar Workflow de Carga no Databricks'

@@ -1,30 +1,61 @@
-name: Deploy and Run - Consulta Analitica Dashboard
+name: Deploy and Run - Consulta Dados Estudantes (Dashboard)
 
 trigger:
   branches:
     include:
+      - dev 
       - main
   paths:
     exclude:
-      - README.md
+      - CONSULTA_DADOS.md
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
+  - group: 'azure-databricks-credentials'
+
+  - ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    - name: ENV_NAME
+      value: 'PROD'
+    - name: TF_VAR_FILE
+      value: 'prod.tfvars'
+  - ${{ if eq(variables['Build.SourceBranchName'], 'dev') }}:
+    - name: ENV_NAME
+      value: 'DEV'
+    - name: TF_VAR_FILE
+      value: 'dev.tfvars'
+
   - name: DATABRICKS_HOST
     value: 'https://azuredatabricks.net'
+  
+  # 🚀 Alvo dinâmico ajustado para o Job 2
   - name: JOB_NAME
-    value: 'Job-Auditoria-Sequencial-Com-Requirements'
-  - name: TASK_KEY
-    value: '2_Consulta_e_Verificacao' # Executa especificamente a segunda tarefa
+    value: 'JOB_2_PIPELINE_DE_CONSULTA_$(ENV_NAME)'
 
 jobs:
-- job: TriggerDatabricksTask
-  displayName: 'Disparar Consulta Analítica no Databricks'
+- job: DeployAndTrigger
+  displayName: 'Deploy Terraform e Disparo de Consulta'
   steps:
 
-  # Passo 1: Autenticar e obter o token OAuth dinâmico usando o Service Principal
+  - task: TerraformInstaller@1
+    displayName: 'Instalar Terraform'
+    inputs:
+      terraformVersion: 'latest'
+
+  - bash: |
+      echo "Iniciando o Deploy do Terraform de Consulta para o ambiente $(ENV_NAME)..."
+      cd terraform
+      terraform init
+      terraform workspace select $(ENV_NAME) || terraform workspace new $(ENV_NAME)
+      terraform apply -var-file="envs/$(TF_VAR_FILE)" -auto-approve
+    displayName: 'Terraform Apply (Atualizar Código e Job)'
+    env:
+      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+      ARM_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+      ARM_TENANT_ID: $(AZURE_TENANT_ID)
+      DATABRICKS_TOKEN: $(db_token)
+
   - bash: |
       echo "Solicitando Token de Acesso Azure para o Databricks..."
       TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
@@ -36,32 +67,25 @@ jobs:
       DATABRICKS_TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
       echo "##vso[task.setvariable variable=db_token;issetsecret=true]$DATABRICKS_TOKEN"
     displayName: 'Obter Token OAuth Azure'
-    env:
-      AZURE_TENANT_ID: $(AZURE_TENANT_ID)
-      AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
-      AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
 
-  # Passo 2: Buscar o ID do Job e rodar unicamente a tarefa de Consulta
   - bash: |
-      echo "Buscando o ID do Job no Databricks..."
+      echo "Buscando o ID do Job de Consulta no Databricks para: $(JOB_NAME)..."
+      
       JOB_ID=$(curl -s -X GET "$(DATABRICKS_HOST)/api/2.1/jobs/list" \
         -H "Authorization: Bearer $(db_token)" \
 
         | jq -r --arg NAME "$(JOB_NAME)" '.jobs[] | select(.settings.name==$NAME) | .job_id')
 
       if [ -z "$JOB_ID" ] || [ "$JOB_ID" == "null" ]; then
-        echo "Erro: Job '$(JOB_NAME)' não encontrado no Databricks."
+        echo "❌ Erro: Job '$(JOB_NAME)' não foi localizado."
         exit 1
       fi
 
-      echo "Disparando de forma independente a tarefa: $(TASK_KEY) para o Job ID: $JOB_ID"
+      echo "✅ Job ID Encontrado: $JOB_ID"
+      echo "🚀 Disparando o pipeline de Consulta atualizado para $(ENV_NAME)..."
       
-      # Para disparar uma tarefa específica que possui dependências de forma avulsa pela API da Databricks,
-      # nós listamos as tarefas e ativamos o gatilho direto pela API de runs.
       curl -s -X POST "$(DATABRICKS_HOST)/api/2.1/jobs/run-now" \
         -H "Authorization: Bearer $(db_token)" \
         -H "Content-Type: application/json" \
-        -d "{
-          \"job_id\": $JOB_ID
-        }" | jq .
-    displayName: 'Executar Task de Consulta no Databricks'
+        -d "{ \"job_id\": $JOB_ID }" | jq .
+    displayName: 'Executar Workflow de Consulta no Databricks'

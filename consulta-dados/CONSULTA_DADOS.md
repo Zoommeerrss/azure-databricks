@@ -1,66 +1,84 @@
-# 📊 Projeto: Consulta Analítica e Dashboard de Dados
+# 📊 Projeto de Consulta e Analytics - Databricks Decoupled Data App
 
-Este repositório armazena o script analítico e gerencial do ecossistema **Azure Databricks**. Seguindo os novos requisitos de arquitetura definidos pelo cliente, este projeto foi totalmente apartado da receita de infraestrutura (Terraform) e do projeto de carga. Ele possui governança própria, seu arquivo independente de dependências (`requirements.txt`) e sua própria esteira de CI/CD.
-
-## 🎯 Objetivo do Projeto
-A função principal do script contido neste repositório é atuar na **camada de consumo (Gold/Analytics)**. Ele realiza o cruzamento de dados (como `JOINs` entre tabelas de Estudantes e Cursos) e agrega as métricas volumétricas para servir como a base lógica de um Dashboard Analítico Interativo, consolidando as visões de negócios exigidas pelo cliente.
+Este repositório contém a aplicação analítica isolada de consulta e geração de indicadores sobre os dados de estudantes e cursos do ecossistema Databricks. Seguindo a estratégia de **Desacoplamento Total de Recursos**, este projeto gerencia de forma 100% autônoma o seu código de análise, seu respectivo Job orquestrador e seu próprio pipeline de CI/CD, consumindo as tabelas governadas via Unity Catalog de forma transparente.
 
 ---
 
-## 📁 Estrutura do Repositório
+## 🎨 1. Arquitetura e Fluxo de Publicação
+
+O ciclo de vida deste repositório analítico é gerenciado via **Azure DevOps Pipelines** integrado ao **Terraform (Provedor Databricks)**. O deploy é completamente isolado do projeto de carga:
 
 ```text
-projeto-consulta-dados/
-├── .github/
-│   └── (Opcional: Regras de governança e aprovação do repositório)
-├── azure-pipelines.yml      # Pipeline de CI/CD isolada no Azure DevOps
-├── dashboard_consulta.py    # Script analítico em Python/Spark (Executado no Databricks)
-├── requirements.txt         # Bibliotecas de visualização e análise exclusivas deste projeto
-└── CONSULTA_DADOS.md                # Documentação técnica do projeto
+┌────────────────────────────────────────────────────────┐
+│             PROJETO GIT: consulta-dados                │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (Gatilho por Branch: dev ou main)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│         ESTEIRA DE CI/CD: azure-pipelines.yml          │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (Autentica via Service Principal Oauth)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│           CAMADA DE COMPILAÇÃO: /terraform             │
+│   (Aplica o Workspace isolado e o .tfvars do ambiente) │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼ [Publica Artefatos e Cria Job]
+┌────────────────────────────────────────────────────────┐
+│               WORKSPACE AZURE DATABRICKS               │
+│ 📂 /Workspace/Production/consulta-dados_[dev|prod]     │
+│ ⚙️ JOB_2_PIPELINE_DE_CONSULTA_[DEV|PROD]               │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Stack Técnica e Dependências
+## 📂 2. Desenho Estrutural de Pastas
 
-Este projeto gerencia suas dependências de forma isolada no nível da tarefa (*Task-level*) no Databricks. Isso garante que bibliotecas gráficas ou de manipulação analítica mais recentes não causem conflito com as ferramentas de validação do projeto de carga.
+Abaixo está o mapeamento exato da árvore de diretórios do repositório:
 
-O arquivo `requirements.txt` contém os pacotes específicos para engenharia analítica e geração de relatórios (Exemplo):
 ```text
-numpy>=1.24.0
-plotly>=5.14.0
-matplotlib>=3.7.0
+consulta-dados/
+├── 📂 notebooks/
+│   └── 📓 nb_consulta_dados.ipynb  # Notebook Jupyter analítico (Geração de Dashboards/Consultas)
+├── 📂 src/
+│   └── 🐍 consulta_dados.py        # Módulos e funções Python complementares de suporte
+├── 📂 terraform/
+│   ├── 📂 envs/
+│   │   ├── 📄 dev.tfvars           # Parâmetros de DEV (URL do Workspace de desenvolvimento)
+│   │   └── 📄 prod.tfvars          # Parâmetros de PROD (URL do Workspace de produção)
+│   ├── 📜 databricks.tf            # Recursos lógicos: Upload do código analítico e criação do JOB 2
+│   ├── 📜 locals.tf                # Variáveis locais, tags e caminhos dinâmicos de consulta
+│   ├── 📜 outputs.tf               # Exposição de IDs gerados (Job ID, caminhos) para logs da esteira
+│   ├── 📜 providers.tf             # Configuração do provedor Databricks alimentado via pipeline
+│   └── 📜 variables.tf             # Declaração e tipagem estrita das variáveis aceitas pelos ambientes
+├── 📄 .gitignore                   # Bloqueio de arquivos locais temporários do Terraform (.terraform, state)
+├── 💜 azure-pipelines.yml          # Definição e orquestração do pipeline analítico no Azure DevOps
+├── 📘 CONSULTA_DADOS.md            # Documentação técnica do projeto (Este arquivo)
+└── 📄 requirements.txt             # Gerenciamento dinâmico de dependências via PyPI (ex: Plotly, Seaborn)
 ```
 
 ---
 
-## 🚀 Script de Visualização (`dashboard_consulta.py`)
+## ⚙️ 3. Componentes e Inteligência de Infraestrutura
 
-O script é executado sob o cluster **Single Node** econômico, utilizando o modo de segurança `USER_ISOLATION` exigido para ler as tabelas protegidas pela governança trilinear do **Unity Catalog** (`catalogo.esquema.tabela`).
-
-### Fluxo de Execução:
-1. **Consumo Seguro:** Lê as tabelas estruturadas `dev_catalog.student.tbl_student_info` e `dev_catalog.course.tbl_course_info`.
-2. **Processamento Spark:** Realiza o relacionamento cruzado dos dados de alunos matriculados por categoria de curso.
-3. **Agregação:** Gera o DataFrame consolidado que alimenta os relatórios gerenciais da empresa.
+* **`providers.tf`**: Totalmente independente de estados físicos. Utiliza apenas a variável `databricks_workspace_url` e recebe o token de autenticação diretamente do sistema operacional (`DATABRICKS_TOKEN`) injetado pelo Azure DevOps.
+* **`databricks.tf`**: Realiza o upload da estrutura lógica e provisiona o **`JOB_2_PIPELINE_DE_CONSULTA_[ENV]`**. O Job utiliza um cluster efêmero (**`Standard_F4s_v2`**) de nó único para otimização radical de custos (Low-Cost).
+* **Leitura Dinâmica do `requirements.txt`**: O recurso de tarefas utiliza um bloco `dynamic "library"` que converte automaticamente as linhas do seu `requirements.txt` em bibliotecas instaladas no cluster no momento da execução, garantindo que o Terraform não precise ser alterado caso novas bibliotecas gráficas sejam adicionadas ao projeto.
 
 ---
 
-## 🔄 Pipeline de CI/CD (`azure-pipelines.yml`)
+## 🔄 4. Estratégia de Branches e Multiambiente
 
-A automação deste repositório é gerenciada de forma isolada por uma pipeline do **Azure DevOps**, integrada nativamente ao **GitHub** via *Service Connection* segura.
+O isolamento lógico de ambientes é mapeado de forma nativa por Git branches e gerenciado internamente por **Terraform Workspaces**:
 
-```text
-[ Commits na Main ] ➡️ [ Disparo Azure DevOps ] ➡️ [ Token OAuth Dinâmico ] ➡️ [ API Databricks (Task 2) ]
-```
+| Branch Git | Ambiente Terraform | Arquivo de Parâmetros | Sufixo do Job / Pasta no Workspace | Catálogo de Dados Alvo |
+| :--- | :--- | :--- | :--- | :--- |
+| `dev` | `DEV` | `terraform/envs/dev.tfvars` | `*_DEV` / `*_dev` | `dbw_dbx_lowcost_dev_7405611752750506` |
+| `main` | `PROD` | `terraform/envs/prod.tfvars` | `*_PROD` / `*_prod` | `dbw_dbx_lowcost_prod_7405611752750506` |
 
-### Mecanismo de Funcionamento:
-1. **Gatilho de Alteração:** Toda atualização consolidada na branch `main` dispara a esteira de deploy no Azure DevOps.
-2. **Segurança Corporativa:** A pipeline autentica na Azure via **Service Principal (App Registration)** para obter credenciais temporárias por API, sem o uso de chaves fixas.
-3. **Deploy e Execução Independente:** O Azure DevOps aciona diretamente a tarefa `2_Consulta_e_Verificacao` no Job do Databricks. O Databricks clona a versão mais recente deste repositório no GitHub, instala o `requirements.txt` analítico e executa o script de dashboard.
-
----
-
-## ⚠️ Dependência de Orquestração (Garantia de Ordem)
-Embora esta pipeline possa ser disparada manualmente ou via esteira para testes rápidos do time de Analytics, na esteira produtiva **ela possui uma dependência obrigatória da Tarefa de Carga**. 
-
-Conforme o desenho de arquitetura aprovado, este script **só será executado se o projeto anterior (`projeto-carga-dados`) finalizar com sucesso**. Caso o check de carga falhe, esta consulta analítica é automaticamente abortada pelo Databricks para evitar a exibição de relatórios com dados desatualizados ou corrompidos.
+### Fluxo de Orquestração Sequencial (Governança Externa):
+Para garantir a consistência estatística e a integridade do ecossistema, a ordem sequencial de processamento é controlada na esteira de CI/CD:
+1. O **`JOB_1` (Carga)** é disparado e processa as tabelas base.
+2. Após o encerramento do Job 1 com sucesso completo (`exit 0`), o pipeline dispara de forma assíncrona o **`JOB_2` (Consulta)** contido neste repositório para atualizar as visões executivas e dashboards analíticos.
