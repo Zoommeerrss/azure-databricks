@@ -2,29 +2,28 @@
 # 1. PUBLICAÇÃO DOS ARQUIVOS DE CÓDIGO (Notebook, Módulos e Dependências)
 # ==============================================================================
 
-# Publica o Notebook Jupyter principal de Carga no caminho isolado do ambiente
+# 🚀 CORRIGIDO: Alterado de source_path para source
 resource "databricks_notebook" "nb_carga" {
-  source_path = "${path.module}/../notebooks/nb_carga_dados.ipynb"
-  path        = "${local.workspace_base_path}/nb_carga_dados"
-  language    = "PYTHON"
-  format      = "JUPYTER"
+  source   = "${path.module}/../notebooks/nb_carga_dados.ipynb"
+  path     = "${local.workspace_base_path}/nb_carga_dados"
+  language = "PYTHON"
+  format   = "JUPYTER"
 }
 
-# Publica os scripts complementares da pasta src/ como arquivos de Workspace
+# 🚀 CORRIGIDO: Alterado de source_path para source em todos os arquivos de workspace
 resource "databricks_workspace_file" "index" {
-  source_path = "${path.module}/../src/__index__.py"
-  path        = "${local.workspace_base_path}/src/__index__.py"
+  source = "${path.module}/../src/__index__.py"
+  path   = "${local.workspace_base_path}/src/__index__.py"
 }
 
 resource "databricks_workspace_file" "carga_dados_py" {
-  source_path = "${path.module}/../src/carga_dados.py"
-  path        = "${local.workspace_base_path}/src/carga_dados.py"
+  source = "${path.module}/../src/carga_dados.py"
+  path   = "${local.workspace_base_path}/src/carga_dados.py"
 }
 
-# Publica o arquivo de dependências de bibliotecas do projeto
 resource "databricks_workspace_file" "requirements" {
-  source_path = "${path.module}/../requirements.txt"
-  path        = "${local.workspace_base_path}/requirements.txt"
+  source = "${path.module}/../requirements.txt"
+  path   = "${local.workspace_base_path}/requirements.txt"
 }
 
 # ==============================================================================
@@ -32,12 +31,10 @@ resource "databricks_workspace_file" "requirements" {
 # ==============================================================================
 
 resource "databricks_job" "pipeline_carga" {
-  # 🚀 DINÂMICO: Gera 'JOB_1_PIPELINE_DE_CARGA_DEV' ou 'JOB_1_PIPELINE_DE_CARGA_PROD'
   name = "JOB_1_PIPELINE_DE_CARGA_${upper(var.environment)}"
 
-  # Computação de Tarefa isolada usando Standard_F4s_v2 para controle estrito de custos e cotas
   new_cluster {
-    num_workers   = 0  # Configuração Single Node ideal para otimização financeira
+    num_workers   = 0  
     spark_version = "14.3.x-scala2.12"
     node_type_id  = "Standard_F4s_v2"
 
@@ -53,10 +50,13 @@ resource "databricks_job" "pipeline_carga" {
       notebook_path = databricks_notebook.nb_carga.path
     }
 
-    # 🚀 CORRIGIDO: Estrutura oficial para a biblioteca Pydantic
-    library {
-      pypi {
-        package = "pydantic==2.6.1"
+    # Mantendo a leitura automatizada e dinâmica do requirements.txt que você definiu
+    dynamic "library" {
+      for_each = compact(split("\n", file("${path.module}/../requirements.txt")))
+      content {
+        pypi {
+          package = library.value
+        }
       }
     }
   }
