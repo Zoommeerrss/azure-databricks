@@ -17,6 +17,14 @@ else
     BRANCH="dev"
 fi
 
+# Mapeia o arquivo de variáveis baseado na pasta envs/
+TFVARS_FILE="envs/${AMBIENTE}.tfvars"
+
+if [ ! -f "$TFVARS_FILE" ]; then
+    echo "❌ Erro: O arquivo de configuração '$TFVARS_FILE' não foi encontrado!"
+    exit 1
+fi
+
 echo "====================================================================="
 echo "⚙️  CONFIGURANDO COMPONENTES LÓGICOS DATABRICKS: AMBIENTE = ${AMBIENTE^^}"
 echo "====================================================================="
@@ -29,11 +37,16 @@ terraform init -upgrade
 terraform validate
 
 echo "📊 Gerando Plano de Configuração Automatizado..."
-# O Terraform busca a URL do Workspace e o Catálogo internamente por conta própria
-terraform plan -var="environment=${AMBIENTE}" -var="git_branch=${BRANCH}" -out=install_plan.tfplan
+# Injeta o arquivo estático da pasta envs e bloqueia prompts interativos (-input=false)
+terraform plan \
+    -input=false \
+    -var-file="$TFVARS_FILE" \
+    -var="environment=${AMBIENTE}" \
+    -var="git_branch=${BRANCH}" \
+    -out=install_plan.tfplan
 
 echo "🚀 Aplicando Governança e Orquestração..."
-terraform apply install_plan.tfplan
+terraform apply -input=false install_plan.tfplan
 
 rm install_plan.tfplan
 

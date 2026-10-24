@@ -1,6 +1,5 @@
-# ==============================================================================
-# 1. VERSÕES DOS PROVEDORES E CONFIGURAÇÃO DE BACKEND
-# ==============================================================================
+# terraform/providers.tf
+
 terraform {
   required_version = ">= 1.5.0"
 
@@ -11,17 +10,16 @@ terraform {
     }
   }
 
-  # Estado do projeto de carga salvo de forma 100% isolada
+  # Responsabilidade Ajustada: Apenas a identificação do estado isolado
   backend "azurerm" {
     key = "carga-dados.tfstate"
   }
 }
 
-# ==============================================================================
-# 2. PROVEDOR DATABRICKS (CONEXÃO ISOLADA DE MÁXIMA COMPATIBILIDADE)
-# ==============================================================================
 provider "databricks" {
-  # 🚀 RESOLVIDO: Removido o atributo problemático. O provedor agora usa apenas o host.
-  # O token de autenticação é injetado de forma invisível e segura pela esteira de CI/CD
-  host = var.databricks_workspace_url
+  host  = var.databricks_workspace_url
+  token = var.databricks_token
 }
+
+# 🚀 CORRIGIDO: Utiliza o data source oficial que captura os metadados da sessão ativa
+data "databricks_current_config" "current" {}

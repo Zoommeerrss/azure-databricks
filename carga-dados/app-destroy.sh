@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Captura o ambiente (ex: ./infra-reset.sh dev)
+# Captura o ambiente (ex: ./app-destroy.sh dev)
 AMBIENTE=$1
 
 if [ "$AMBIENTE" != "dev" ] && [ "$AMBIENTE" != "prod" ]; then
@@ -10,15 +10,8 @@ if [ "$AMBIENTE" != "dev" ] && [ "$AMBIENTE" != "prod" ]; then
     exit 1
 fi
 
-# 🚀 VALIDAÇÃO: Garante que o desenvolvedor configurou o Token de acesso localmente antes de rodar
-if [ -z "$DATABRICKS_TOKEN" ]; then
-    echo "❌ Erro: A variável de ambiente DATABRICKS_TOKEN não está definida no seu terminal!"
-    echo "Execute primeiro: export DATABRICKS_TOKEN='seu_token_aqui'"
-    exit 1
-fi
-
 # Define o arquivo .tfvars correto baseado no argumento informado
-TF_VAR_FILE="envs/${AMBIENTE}.tfvars"
+TF_VAR_FILE="terraform/envs/${AMBIENTE}.tfvars"
 
 if [ ! -f "$TF_VAR_FILE" ]; then
     echo "❌ Erro: Arquivo de variáveis não encontrado em: $TF_VAR_FILE"
@@ -26,9 +19,11 @@ if [ ! -f "$TF_VAR_FILE" ]; then
 fi
 
 echo "====================================================================="
-echo "💥 INICIANDO DESTRUIÇÃO LÓGICA DO DATABRICKS: AMBIENTE = ${AMBIENTE^^}"
+echo "💥 DESTRUIÇÃO LÓGICA DA APLICAÇÃO DATABRICKS: AMBIENTE = ${AMBIENTE^^}"
 echo "====================================================================="
-echo "⚠️  ATENÇÃO: Isso removerá os Notebooks publicados e o Job deste projeto no Databricks!"
+echo "⚠️  ATENÇÃO: Isso removerá os Jobs, Notebooks e Módulos desta aplicação!"
+
+# Confirmação manual de segurança para execução local
 read -p "👉 Tem certeza que deseja continuar? (y/N): " CONFIRMACAO
 if [[ ! "$CONFIRMACAO" =~ ^[Yy]$ ]]; then
     echo "❌ Operação cancelada pelo usuário."
@@ -38,29 +33,27 @@ fi
 # Entra na pasta do terraform se o script for executado da raiz do projeto
 if [ -d "terraform" ]; then
     cd terraform
+    TF_VAR_FILE="envs/${AMBIENTE}.tfvars"
 fi
 
 echo "🧹 Limpando planos antigos..."
 rm -f destroy_plan.tfplan
 
-echo "📥 Inicializando Provedores Databricks..."
+echo "📥 Sincronizando Provedores Databricks via Terraform..."
 terraform init
 
-# 🚀 MULTIAMBIENTE: Garante a seleção do Workspace do Terraform correspondente para não destruir o ambiente errado
-echo "🌐 Alternando para o Workspace do Terraform: ${AMBIENTE}..."
+echo "🌐 Selecionando Workspace do Terraform para: ${AMBIENTE}..."
 terraform workspace select ${AMBIENTE}
 
 echo "📊 Gerando Plano de Destruição Lógica..."
-# 🚀 CORRIGIDO: Usa o -var-file correto removendo variáveis antigas/inexistentes
 terraform plan -destroy -var-file="$TF_VAR_FILE" -out=destroy_plan.tfplan
 
-echo "💥 Executando o Clean-up Lógico no Databricks..."
+echo "💥 Executando o Clean-up da Aplicação no Databricks..."
 terraform apply destroy_plan.tfplan
 
-# Limpeza segura do plano temporário
+# Limpeza do plano temporário
 rm -f destroy_plan.tfplan
 
 echo "====================================================================="
-echo "✅ CONCLUÍDO! Componentes lógicos removidos com sucesso!"
-echo "👉 O Workspace está limpo para este projeto."
+echo "✅ CONCLUÍDO! Componentes lógicos da aplicação removidos com sucesso!"
 echo "====================================================================="

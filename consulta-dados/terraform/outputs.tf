@@ -3,8 +3,9 @@
 # ==============================================================================
 
 output "notebook_workspace_path" {
-  value       = databricks_notebook.nb_carga.path
-  description = "Caminho absoluto do Notebook de Carga dentro do Workspace do Databricks"
+  # 🚀 CORRIGIDO: Alterado de nb_carga para nb_consulta
+  value       = databricks_notebook.nb_consulta.path
+  description = "Caminho absoluto do Notebook de Consulta dentro do Workspace"
 }
 
 output "workspace_base_directory" {
@@ -17,13 +18,15 @@ output "workspace_base_directory" {
 # ==============================================================================
 
 output "databricks_job_id" {
-  value       = databricks_job.pipeline_carga.id
-  description = "O ID numérico único gerado pelo Databricks para o Job de Carga"
+  # 🚀 CORRIGIDO: Alterado de pipeline_carga para pipeline_consulta
+  value       = databricks_job.pipeline_consulta.id
+  description = "O ID único do Job 2 de Consulta"
 }
 
 output "databricks_job_name" {
-  value       = databricks_job.pipeline_carga.name
-  description = "O nome exato do Job registrado no painel do Databricks"
+  # 🚀 CORRIGIDO: Alterado de pipeline_carga para pipeline_consulta
+  value       = databricks_job.pipeline_consulta.name
+  description = "Nome exato do Job registrado"
 }
 
 # ==============================================================================

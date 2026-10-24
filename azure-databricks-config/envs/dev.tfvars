@@ -10,3 +10,6 @@ git_branch = "dev"
 
 # Configurações do Cluster Spark (Modo Econômico)
 autotermination_minutes = 10
+
+# Nome do Catálogo identificado manualmente no console do Databricks
+databricks_catalog_name = "dbw_dbx_lowcost_dev_7405615700808623"

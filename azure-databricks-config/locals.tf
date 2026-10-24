@@ -3,7 +3,7 @@ locals {
   env = var.environment
 
   # 🚀 AUTOMÁTICO: O nome exato do seu catálogo fica travado aqui no Terraform, sem trabalho manual
-  databricks_catalog_name = "dbw_dbx_lowcost_dev_7405611752750506"
+  databricks_catalog_name = "dbw_dbx_lowcost_dev_7405615700808623"
 
   # Lê de forma segura a sua flag de controle de custos do cluster via arquivo YAML
   _settings      = yamldecode(file("${path.module}/config/settings.yaml"))

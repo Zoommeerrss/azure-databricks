@@ -57,6 +57,8 @@ consulta-dados/
 ├── 💜 azure-pipelines.yml          # Definição e orquestração do pipeline analítico no Azure DevOps
 ├── 📘 CONSULTA_DADOS.md            # Documentação técnica do projeto (Este arquivo)
 └── 📄 requirements.txt             # Gerenciamento dinâmico de dependências via PyPI (ex: Plotly, Seaborn)
+├── ⚙️ app-deploy.sh                # Implanta o projeto
+└── ⚙️ app-destroy.sh               # Destroi o projeto
 ```
 
 ---

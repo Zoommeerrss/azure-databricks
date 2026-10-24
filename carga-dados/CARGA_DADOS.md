@@ -58,6 +58,8 @@ carga-dados/
 ├── 💜 azure-pipelines.yml          # Definição e orquestração do pipeline multiambiente do Azure DevOps
 ├── 📘 CARGA_DADOS.md               # Documentação técnica do projeto (Este arquivo)
 └── 📄 requirements.txt             # Dependências de bibliotecas Python instaladas em tempo de execução
+├── ⚙️ app-deploy.sh                # Implanta o projeto
+└── ⚙️ app-destroy.sh               # Destroi o projeto
 ```
 
 ---

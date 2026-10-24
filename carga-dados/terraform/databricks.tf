@@ -50,14 +50,28 @@ resource "databricks_job" "pipeline_carga" {
       notebook_path = databricks_notebook.nb_carga.path
     }
 
-    # Mantendo a leitura automatizada e dinâmica do requirements.txt que você definiu
-    dynamic "library" {
-      for_each = compact(split("\n", file("${path.module}/../requirements.txt")))
-      content {
-        pypi {
-          package = library.value
-        }
-      }
-    }
+  }
+
+  # 🚀 SEGURANÇA: O Job só pode ser criado/atualizado DEPOIS que o vínculo do catálogo estiver ativo
+  depends_on = [databricks_workspace_binding.catalog_binding]
+}
+
+# 🚀 GOVERNANÇA: Força o Unity Catalog a liberar o catálogo para o Workspace atual,
+# eliminando definitivamente o erro de INSUFFICIENT_PERMISSIONS (42501)
+resource "databricks_workspace_binding" "catalog_binding" {
+  securable_type = "catalog"
+  securable_name = local.databricks_catalog_name # "dbw_dbx_lowcost_dev"
+  workspace_id   = var.databricks_workspace_numeric_id   # O ID do Workspace que você mapeou no dev.tfvars
+
+  depends_on = [databricks_grants.catalog_grants]
+}
+
+resource "databricks_grants" "catalog_grants" {
+  catalog = local.databricks_catalog_name # "dbw_dbx_lowcost_dev"
+
+  grant {
+    # 🚀 ESCALÁVEL: Aplica para os 100+ usuários atuais e qualquer novo que entrar
+    principal  = "account users" 
+    privileges = ["ALL_PRIVILEGES"]
   }
 }
