@@ -4,10 +4,10 @@
 environment              = "prod"
 
 # Conexão Lógica Databricks
-databricks_workspace_id  = "/subscriptions/cad7880a-5cb0-4584-8efc-e0238c52be5f/resourceGroups/rg-dbx-lowcost-prod/providers/Microsoft.Databricks/workspaces/dbw-dbx-lowcost-prod"
-databricks_workspace_url = "https://adb-7405615700808623.3.azuredatabricks.net/"
+databricks_workspace_id  = "/subscriptions/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/resourceGroups/rg-dbx-lowcost-prod/providers/Microsoft.Databricks/workspaces/dbw-dbx-lowcost-prod"
+databricks_workspace_url = "https://adb-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.3.azuredatabricks.net/"
 databricks_token         = "dapicXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-3"
-databricks_workspace_numeric_id = "7405615700808623"
+databricks_workspace_numeric_id = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 # Conexão Física do Backend (Responsabilidade do Terraform)
 resource_group_name      = "rg-dbx-lowcost-prod"
