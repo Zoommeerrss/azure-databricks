@@ -75,8 +75,8 @@ O isolamento lógico de ambientes é mapeado de forma nativa por Git branches e 
 
 | Branch Git | Ambiente Terraform | Arquivo de Parâmetros | Sufixo do Job / Pasta no Workspace | Catálogo de Dados Alvo |
 | :--- | :--- | :--- | :--- | :--- |
-| `dev` | `DEV` | `terraform/envs/dev.tfvars` | `*_DEV` / `*_dev` | `dbw_dbx_lowcost_dev_7405611752750506` |
-| `main` | `PROD` | `terraform/envs/prod.tfvars` | `*_PROD` / `*_prod` | `dbw_dbx_lowcost_prod_7405611752750506` |
+| `dev` | `DEV` | `terraform/envs/dev.tfvars` | `*_DEV` / `*_dev` | `dbw-dbx-lowcost-dev` |
+| `main` | `PROD` | `terraform/envs/prod.tfvars` | `*_PROD` / `*_prod` | `dbw-dbx-lowcost-prod` |
 
 ### Fluxo de Orquestração Sequencial (Governança Externa):
 Para garantir a consistência estatística e a integridade do ecossistema, a ordem sequencial de processamento é controlada na esteira de CI/CD:

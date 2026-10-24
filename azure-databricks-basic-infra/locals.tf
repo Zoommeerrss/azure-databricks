@@ -5,9 +5,10 @@ locals {
 
   global_tags = {
     Environment    = local.env
-    Project        = "Databricks-LowCost-Lab"
+    Project        = var.project_name
     ManagedBy      = "Terraform"
     CostCenter     = "Auditoria-DataQuality-${local.env}"
+    ProjectOwner   = "Emerzoom"
     SubscriptionId = data.azurerm_subscription.current.subscription_id
   }
 }

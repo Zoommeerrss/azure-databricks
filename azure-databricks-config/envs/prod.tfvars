@@ -10,4 +10,3 @@ git_branch = "main"
 
 # Configurações do Cluster Spark
 autotermination_minutes = 15
-

@@ -6,7 +6,7 @@ variable "location" {
 
 variable "project_name" {
   type        = string
-  default     = "auditoria"
+  default     = "Azure-Databricks-LowCost-Lab"
   description = "Nome base do projeto utilizado para compor o prefixo dos recursos"
 }
 

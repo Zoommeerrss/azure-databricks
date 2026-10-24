@@ -3,7 +3,7 @@ locals {
   env = var.environment
 
   # 🚀 AUTOMÁTICO: O nome do catálogo se adapta de forma dinâmica conforme o ambiente atual
-  databricks_catalog_name = "dbw_dbx_lowcost_${local.env}_7405611752750506"
+  databricks_catalog_name = "dbw_dbx_lowcost_${local.env}"
 
   # 🚀 ISOLAMENTO: Define a pasta base exclusiva para este projeto dentro do Workspace por ambiente
   workspace_base_path = "/Workspace/Production/carga-dados_${local.env}"

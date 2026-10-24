@@ -19,6 +19,10 @@ resource "azurerm_databricks_workspace" "db_workspace" {
     
     private_subnet_name                                 = azurerm_subnet.private_subnet.name
     private_subnet_network_security_group_association_id = azurerm_subnet_network_security_group_association.private_assoc.id 
+
+    storage_account_name     = "dbfsmgmt${replace(local.resource_prefix, "-", "")}" 
+    nat_gateway_name         = "nat-dbw-${local.resource_prefix}"
+    public_ip_name           = "pip-nat-dbw-${local.resource_prefix}"
   }
 
   depends_on = [

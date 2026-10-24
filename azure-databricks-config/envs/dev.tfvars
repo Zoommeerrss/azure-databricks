@@ -10,4 +10,3 @@ git_branch = "dev"
 
 # Configurações do Cluster Spark (Modo Econômico)
 autotermination_minutes = 10
-
