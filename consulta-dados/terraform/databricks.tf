@@ -1,39 +1,51 @@
 # ==============================================================================
+# 📂 0. CRIAÇÃO ESTRUTURADA DA PASTA PAI NO WORKSPACE
+# ==============================================================================
+# 🚀 GARANTIA: Cria a árvore lítica de pastas para evitar erros de diretório pai inexistente
+resource "databricks_directory" "parent_dir" {
+  path = local.workspace_base_path
+}
+
+# ==============================================================================
 # 1. PUBLICAÇÃO DOS ARQUIVOS DE CÓDIGO (Notebook, Módulos e Dependências)
 # ==============================================================================
 resource "databricks_notebook" "nb_consulta" {
-  source   = "${path.module}/../notebooks/nb_consulta_dados.ipynb"
-  path     = "${local.workspace_base_path}/nb_consulta_dados"
-  language = "PYTHON"
-  format   = "JUPYTER"
+  source     = "${path.module}/../notebooks/nb_consulta_dados.ipynb"
+  path       = "${local.workspace_base_path}/nb_consulta_dados"
+  language   = "PYTHON"
+  format     = "JUPYTER"
+  depends_on = [databricks_directory.parent_dir]
 }
 
 # Mantido idêntico ao seu padrão
 resource "databricks_workspace_file" "index" {
-  source = "${path.module}/../src/__index__.py"
-  path   = "${local.workspace_base_path}/src/__index__.py"
+  source     = "${path.module}/../src/__index__.py"
+  path       = "${local.workspace_base_path}/src/__index__.py"
+  depends_on = [databricks_directory.parent_dir]
 }
 
 # 🚀 CORRIGIDO: Nome do recurso e caminhos apontando corretamente para o script de consulta real
 resource "databricks_workspace_file" "consulta_dados_py" {
-  source = "${path.module}/../src/consulta_dados.py"
-  path   = "${local.workspace_base_path}/src/consulta_dados.py"
+  source     = "${path.module}/../src/consulta_dados.py"
+  path       = "${local.workspace_base_path}/src/consulta_dados.py"
+  depends_on = [databricks_directory.parent_dir]
 }
 
 # Mantido idêntico ao seu padrão
 resource "databricks_workspace_file" "requirements" {
-  source = "${path.module}/../requirements.txt"
-  path   = "${local.workspace_base_path}/requirements.txt"
+  source     = "${path.module}/../requirements.txt"
+  path       = "${local.workspace_base_path}/requirements.txt"
+  depends_on = [databricks_directory.parent_dir]
 }
 
 # ==============================================================================
 # 2. DEFINIÇÃO DO ORQUESTRADOR (Job Cluster Ephemeral Low-Cost)
 # ==============================================================================
+# ==============================================================================
+# 2. DEFINIÇÃO DO ORQUESTRADOR (Job Cluster Ephemeral Low-Cost)
+# ==============================================================================
 resource "databricks_job" "pipeline_consulta" {
-  # 🚀 CORRIGIDO: Alterado para JOB_2 e padronizado o sufixo analítico em maiúsculo
   name = "JOB_2_PIPELINE_DE_CONSULTA_${upper(var.environment)}"
-
-  # 🚀 FRONTEIRA: Vincula as tags de governança exclusivas da camada analítica
   tags = local.global_tags
 
   new_cluster {
@@ -43,6 +55,7 @@ resource "databricks_job" "pipeline_consulta" {
 
     spark_conf = {
       "spark.databricks.cluster.profile" = "singleNode"
+      "spark.master"                     = "local[*]" # Garante a execução Single-Node legítima
     }
   }
 
@@ -51,10 +64,15 @@ resource "databricks_job" "pipeline_consulta" {
 
     notebook_task {
       notebook_path = databricks_notebook.nb_consulta.path
+      
+      # 🚀 ADICIONADO: Injeta o mapa de catálogos vizinhos de forma automatizada na VM!
+      base_parameters = {
+        catalog_name        = local.databricks_catalog_name # Catálogo próprio analítico
+        source_catalog_name = local.source_catalog_name     # Catálogo de ingestão (carga) descoberto
+      }
     }
   }
 
-  # 🚀 AUTOMÁTICO: Carrega dinamicamente os pacotes gráficos (ex: Plotly, Seaborn) do requirements.txt analítico no cluster
   dynamic "library" {
     for_each = compact(split("\n", file("${path.module}/../requirements.txt")))
     content {
@@ -63,15 +81,5 @@ resource "databricks_job" "pipeline_consulta" {
       }
     }
   }
-
-  # 🚀 SEGURANÇA: O Job só pode ser criado/atualizado DEPOIS que o vínculo do catálogo estiver ativo
-  depends_on = [databricks_workspace_binding.catalog_binding]
 }
-
-# 🚀 GOVERNANÇA: Força o Unity Catalog a liberar o catálogo para o Workspace atual,
-# eliminando definitivamente o erro de INSUFFICIENT_PERMISSIONS (42501)
-resource "databricks_workspace_binding" "catalog_binding" {
-  securable_type = "catalog"
-  securable_name = local.databricks_catalog_name # "dbw_dbx_lowcost_dev"
-  workspace_id   = data.databricks_current_metastore.current.workspace_id # O ID do Workspace que você mapeou no dev.tfvars
-}
+  

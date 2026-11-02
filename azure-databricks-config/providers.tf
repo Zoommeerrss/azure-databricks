@@ -12,27 +12,23 @@ terraform {
   }
 }
 
-# Lê o histórico de rede e do workspace criados na outra pasta
-data "terraform_remote_state" "infra_base" {
-  backend = "local"
-  config = {
-    path = "${path.module}/../azure-databricks-basic-infra/terraform.tfstate"
-  }
-}
-
-# Conecta nativamente usando a URL descoberta
-provider "databricks" {
-  host      = data.terraform_remote_state.infra_base.outputs.databricks_workspace_url
-  auth_type = "azure-cli"
-}
-
-# Provider básico necessário apenas para o data source calcular o ID interno
 provider "azurerm" {
   features {}
 }
 
-# 🚀 A MÁGICA AQUI: Consulta o Workspace na Azure para descobrir o ID numérico dele sozinho
+# Adicionado para resolver o erro de recurso não declarado no databricks.tf
+data "azurerm_client_config" "current" {}
+
+# Consulta o Workspace na Azure para descobrir as propriedades dele sozinho
 data "azurerm_databricks_workspace" "existing_dbw" {
   name                = "dbw-dbx-lowcost-${var.environment}"
   resource_group_name = "rg-dbx-lowcost-${var.environment}"
+}
+
+# Conecta nativamente usando a URL descoberta diretamente da Azure
+provider "databricks" {
+  host         = data.azurerm_databricks_workspace.existing_dbw.workspace_url
+  # AJUSTE: Força o provedor a usar o ID correto descoberto pelo Data Source, eliminando o mismatch
+  workspace_id = data.azurerm_databricks_workspace.existing_dbw.workspace_id
+  auth_type    = "azure-cli"
 }

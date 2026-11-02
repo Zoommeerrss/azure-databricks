@@ -1,55 +1,87 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Captura o ambiente (ex: ./infra-install.sh dev)
-AMBIENTE=$1
+AMBIENTE="${1:-}"
 
-if [ "$AMBIENTE" != "dev" ] && [ "$AMBIENTE" != "main" ]; then
-    echo "❌ Erro: Você deve especificar o ambiente de forma válida!"
+if [[ "$AMBIENTE" != "dev" && "$AMBIENTE" != "main" ]]; then
+    echo "❌ Erro: Você deve especificar um ambiente válido!"
     echo "Uso correto: $0 [dev|main]"
     exit 1
 fi
 
-# Define a branch de forma automática
-if [ "$AMBIENTE" == "main" ]; then
+# Define a branch automaticamente
+if [[ "$AMBIENTE" == "main" ]]; then
     BRANCH="main"
 else
     BRANCH="dev"
 fi
 
-# Mapeia o arquivo de variáveis baseado na pasta envs/
 TFVARS_FILE="envs/${AMBIENTE}.tfvars"
 
-if [ ! -f "$TFVARS_FILE" ]; then
-    echo "❌ Erro: O arquivo de configuração '$TFVARS_FILE' não foi encontrado!"
+if [[ ! -f "$TFVARS_FILE" ]]; then
+    echo "❌ Arquivo não encontrado: $TFVARS_FILE"
     exit 1
 fi
 
 echo "====================================================================="
-echo "⚙️  CONFIGURANDO COMPONENTES LÓGICOS DATABRICKS: AMBIENTE = ${AMBIENTE^^}"
+echo "⚙️ CONFIGURANDO COMPONENTES DATABRICKS: ${AMBIENTE^^}"
 echo "====================================================================="
 
-echo "🧹 Limpando planos antigos..."
-rm -f install_plan.tfplan
+echo "🧹 Limpando artefatos temporários..."
 
-echo "📥 Inicializando e Validando Provedores Databricks..."
-terraform init -upgrade
+find . -maxdepth 1 -name "*.tfplan" -type f -delete
+rm -f crash.log
+
+# Limpa cache dos providers e módulos
+rm -rf .terraform
+rm -f .terraform.lock.hcl
+
+echo "✅ Limpeza concluída"
+
+echo ""
+echo "📥 Inicializando Terraform..."
+terraform init -upgrade -reconfigure
+
+echo ""
+echo "🔍 Validando configuração..."
 terraform validate
 
-echo "📊 Gerando Plano de Configuração Automatizado..."
-# Injeta o arquivo estático da pasta envs e bloqueia prompts interativos (-input=false)
+echo ""
+echo "📊 Gerando plano..."
+
 terraform plan \
-    -input=false \
-    -var-file="$TFVARS_FILE" \
-    -var="environment=${AMBIENTE}" \
-    -var="git_branch=${BRANCH}" \
-    -out=install_plan.tfplan
+  -input=false \
+  -var-file="$TFVARS_FILE" \
+  -var="environment=${AMBIENTE}" \
+  -var="git_branch=${BRANCH}" \
+  -out=install_plan.tfplan
 
-echo "🚀 Aplicando Governança e Orquestração..."
-terraform apply -input=false install_plan.tfplan
+echo ""
+echo "🚀 Aplicando alterações..."
 
-rm install_plan.tfplan
+terraform apply \
+  -input=false \
+  install_plan.tfplan
 
+echo ""
+echo "🔍 Validando estado..."
+
+terraform state list >/dev/null
+
+echo ""
+echo "🧹 Removendo plano temporário..."
+rm -f install_plan.tfplan
+
+echo ""
 echo "====================================================================="
-echo "✅ CONCLUÍDO! Ecossistema configurado de forma 100% automatizada!"
+echo "📋 RESUMO"
+echo "====================================================================="
+
+echo "Ambiente : $AMBIENTE"
+echo "Branch    : $BRANCH"
+echo "Tfvars    : $TFVARS_FILE"
+
+echo ""
+echo "✅ Deploy concluído!"
 echo "====================================================================="

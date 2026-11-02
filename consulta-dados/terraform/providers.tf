@@ -10,9 +10,9 @@ terraform {
     }
   }
 
-  # Responsabilidade Ajustada: Apenas a identificação do estado isolado
+  # 🚀 CORRIGIDO: Agora o estado está 100% isolado do projeto de carga
   backend "azurerm" {
-    key = "carga-dados.tfstate"
+    key = "consulta-dados.tfstate"
   }
 }
 

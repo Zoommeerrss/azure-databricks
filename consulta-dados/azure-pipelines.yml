@@ -29,7 +29,6 @@ variables:
   - name: DATABRICKS_HOST
     value: 'https://azuredatabricks.net'
   
-  # 🚀 Alvo dinâmico ajustado para o Job 2
   - name: JOB_NAME
     value: 'JOB_2_PIPELINE_DE_CONSULTA_$(ENV_NAME)'
 
@@ -38,11 +37,33 @@ jobs:
   displayName: 'Deploy Terraform e Disparo de Consulta'
   steps:
 
+  # 🚀 CORRIGIDO PASSO 1: Obter o Token OAuth ANTES de rodar o Terraform Apply
+  - bash: |
+      echo "Solicitando Token de Acesso Azure para o Databricks no ambiente $(ENV_NAME)..."
+      
+      # URL corrigida apontando para a API real de login identity da Microsoft
+      TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
+        -d "grant_type=client_credentials" \
+        -d "client_id=$(AZURE_CLIENT_ID)" \
+        -d "client_secret=$(AZURE_CLIENT_SECRET)" \
+        -d "scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default")
+      
+      DATABRICKS_TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
+      
+      if [ -z "$DATABRICKS_TOKEN" ] || [ "$DATABRICKS_TOKEN" == "null" ]; then
+        echo "❌ Erro Crítico: Falha ao gerar o token OAuth da Azure."
+        exit 1
+      fi
+      
+      echo "##vso[task.setvariable variable=db_token;issetsecret=true]$DATABRICKS_TOKEN"
+    displayName: 'Obter Token OAuth Azure'
+
   - task: TerraformInstaller@1
     displayName: 'Instalar Terraform'
     inputs:
       terraformVersion: 'latest'
 
+  # 🚀 CORRIGIDO PASSO 2: O Terraform executa agora com a variável $(db_token) devidamente populada
   - bash: |
       echo "Iniciando o Deploy do Terraform de Consulta para o ambiente $(ENV_NAME)..."
       cd terraform
@@ -54,20 +75,9 @@ jobs:
       ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
       ARM_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
       ARM_TENANT_ID: $(AZURE_TENANT_ID)
-      DATABRICKS_TOKEN: $(db_token)
+      TF_VAR_databricks_token: $(db_token) # Alinhado com o variables.tf do projeto de consulta
 
-  - bash: |
-      echo "Solicitando Token de Acesso Azure para o Databricks..."
-      TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
-        -d "grant_type=client_credentials" \
-        -d "client_id=$(AZURE_CLIENT_ID)" \
-        -d "client_secret=$(AZURE_CLIENT_SECRET)" \
-        -d "scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default")
-      
-      DATABRICKS_TOKEN=$(echo $TOKEN_RESPONSE | jq -r '.access_token')
-      echo "##vso[task.setvariable variable=db_token;issetsecret=true]$DATABRICKS_TOKEN"
-    displayName: 'Obter Token OAuth Azure'
-
+  # Passo 3: Buscar o ID do Job 2 e executar o disparo no Databricks
   - bash: |
       echo "Buscando o ID do Job de Consulta no Databricks para: $(JOB_NAME)..."
       
@@ -88,4 +98,6 @@ jobs:
         -H "Authorization: Bearer $(db_token)" \
         -H "Content-Type: application/json" \
         -d "{ \"job_id\": $JOB_ID }" | jq .
+      
+      echo "▶️ Comando enviado com sucesso!"
     displayName: 'Executar Workflow de Consulta no Databricks'

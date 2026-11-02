@@ -1,77 +1,74 @@
 # ==============================================================================
-# 1. PUBLICAÇÃO DOS ARQUIVOS DE CÓDIGO (Notebook, Módulos e Dependências)
+# 0. DECLARAÇÃO DE RECURSOS DE CONTEXTO DA AZURE
 # ==============================================================================
 
-# 🚀 CORRIGIDO: Alterado de source_path para source
-resource "databricks_notebook" "nb_carga" {
-  source   = "${path.module}/../notebooks/nb_carga_dados.ipynb"
-  path     = "${local.workspace_base_path}/nb_carga_dados"
-  language = "PYTHON"
-  format   = "JUPYTER"
+# Captura dinamicamente os dados da identidade atual que está executando o script
+data "azurerm_client_config" "current" {}
+
+# ==============================================================================
+# 1. ELEVAÇÃO DE PERMISSÃO IAM NA AZURE (REQUISITO DE SEGURANÇA)
+# ==============================================================================
+
+# No bloco azurerm_role_assignment (Linha 14):
+resource "azurerm_role_assignment" "tf_access_connector_contributor" {
+  scope                = var.databricks_access_connector_id != null ? var.databricks_access_connector_id : "/subscriptions/cad7880a-5cb0-4584-8efc-e0238c52be5f/resourceGroups/rg-dbx-lowcost-${var.environment}/providers/Microsoft.Databricks/accessConnectors/ac-dbx-lowcost-${var.environment}"
+  role_definition_name = "Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# 🚀 CORRIGIDO: Alterado de source_path para source em todos os arquivos de workspace
-resource "databricks_workspace_file" "index" {
-  source = "${path.module}/../src/__index__.py"
-  path   = "${local.workspace_base_path}/src/__index__.py"
-}
+# No bloco databricks_storage_credential:
+resource "databricks_storage_credential" "external_creds" {
+  name = "cred-storage-${local.catalog_name}"
+  
+  azure_managed_identity {
+    access_connector_id = var.databricks_access_connector_id != null ? var.databricks_access_connector_id : "/subscriptions/cad7880a-5cb0-4584-8efc-e0238c52be5f/resourceGroups/rg-dbx-lowcost-${var.environment}/providers/Microsoft.Databricks/accessConnectors/ac-dbx-lowcost-${var.environment}"
+  }
 
-resource "databricks_workspace_file" "carga_dados_py" {
-  source = "${path.module}/../src/carga_dados.py"
-  path   = "${local.workspace_base_path}/src/carga_dados.py"
+  depends_on = [
+    azurerm_role_assignment.tf_access_connector_contributor
+  ]
 }
-
-resource "databricks_workspace_file" "requirements" {
-  source = "${path.module}/../requirements.txt"
-  path   = "${local.workspace_base_path}/requirements.txt"
+# Registra a URL do container da Azure como um local de armazenamento confiável
+resource "databricks_external_location" "catalog_storage" {
+  name            = "ext-location-${local.catalog_name}"
+  url             = var.catalog_storage_root
+  credential_name = databricks_storage_credential.external_creds.name
+  comment         = "Localização externa gerenciada para o catálogo da aplicação de carga"
 }
 
 # ==============================================================================
-# 2. DEFINIÇÃO DO ORQUESTRADOR (Job Cluster Ephemeral Low-Cost)
+# 3. GOVERNANÇA DE DADOS (CATÁLOGO, SCHEMAS E VOLUMES)
 # ==============================================================================
 
-resource "databricks_job" "pipeline_carga" {
-  name = "JOB_1_PIPELINE_DE_CARGA_${upper(var.environment)}"
+# Cria o catálogo da aplicação apontando para a raiz física parametrizada no tfvars
+resource "databricks_catalog" "carga" {
+  name         = local.catalog_name
+  comment      = "Catálogo da aplicação de carga para o projeto carga-dados"
+  storage_root = var.catalog_storage_root  
+  owner        = "account users"
 
-  new_cluster {
-    num_workers   = 0  
-    spark_version = "14.3.x-scala2.12"
-    node_type_id  = "Standard_F4s_v2"
-
-    spark_conf = {
-      "spark.databricks.cluster.profile" = "singleNode"
-    }
-  }
-
-  task {
-    task_key = "executar_nb_carga"
-
-    notebook_task {
-      notebook_path = databricks_notebook.nb_carga.path
-    }
-
-  }
-
-  # 🚀 SEGURANÇA: O Job só pode ser criado/atualizado DEPOIS que o vínculo do catálogo estiver ativo
-  depends_on = [databricks_workspace_binding.catalog_binding]
+  depends_on = [
+    databricks_external_location.catalog_storage
+  ]
 }
 
-# 🚀 GOVERNANÇA: Força o Unity Catalog a liberar o catálogo para o Workspace atual,
-# eliminando definitivamente o erro de INSUFFICIENT_PERMISSIONS (42501)
-resource "databricks_workspace_binding" "catalog_binding" {
-  securable_type = "catalog"
-  securable_name = local.databricks_catalog_name # "dbw_dbx_lowcost_dev"
-  workspace_id   = var.databricks_workspace_numeric_id   # O ID do Workspace que você mapeou no dev.tfvars
-
-  depends_on = [databricks_grants.catalog_grants]
+# Cria as gavetas lógicas de banco de dados para Alunos
+resource "databricks_schema" "student" {
+  catalog_name = databricks_catalog.carga.name
+  name         = local.student_schema_name
 }
 
-resource "databricks_grants" "catalog_grants" {
-  catalog = local.databricks_catalog_name # "dbw_dbx_lowcost_dev"
-
-  grant {
-    # 🚀 ESCALÁVEL: Aplica para os 100+ usuários atuais e qualquer novo que entrar
-    principal  = "account users" 
-    privileges = ["ALL_PRIVILEGES"]
-  }
+# Cria as gavetas lógicas de banco de dados para Cursos
+resource "databricks_schema" "course" {
+  catalog_name = databricks_catalog.carga.name
+  name         = local.course_schema_name
 }
+
+# Configura o volume gerenciado para a recepção dos arquivos brutos/landing zone
+resource "databricks_volume" "arquivos_brutos" {
+  catalog_name = databricks_catalog.carga.name
+  schema_name  = databricks_schema.student.name
+  name         = local.raw_volume_name
+  volume_type  = "MANAGED"
+}
+

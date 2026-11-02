@@ -22,8 +22,8 @@ azure-databricks-basic-infra/
 ├── security.tf          # Gerencia os Grupos de Segurança de Rede (NSG) e suas associações
 ├── storage.tf           # Cria a conta de armazenamento (ADLS Gen2) usada de raiz pelo Data Lake
 ├── variables.tf         # Mapeia as variáveis de entrada de infraestrutura (região, ambiente, nomes)
-├── deploy_infra.sh      # Script automatizado para implantação isolada deste repositório
-└── destroy_infra.sh     # Script automatizado para destruição isolada deste repositório
+├── infra-deploy.sh      # Script automatizado para implantação isolada deste repositório
+└── infra-destroy.sh     # Script automatizado para destruição isolada deste repositório
 ```
 
 > 💡 **Nota de Arquitetura:** Este projeto adota uma abordagem estritamente focada em IaaS/PaaS da Azure. Ele deve ser executado com sucesso e finalizado antes de iniciar qualquer configuração lógica de dados dentro do Databricks.

@@ -18,8 +18,8 @@ azure-databricks-config/
 ├── outputs.tf                 # Exibe os IDs dos Jobs de Carga e Consulta gerados após o deploy
 ├── providers.tf               # Declara a autenticação focada exclusivamente no provider do Databricks
 ├── variables.tf               # Mapeia as variáveis lógicas de entrada (URL do Workspace, Ambiente, Branches)
-├── deploy_config.sh           # Script automatizado para implantação lógica isolada
-└── destroy_config.sh          # Script automatizado para destruição lógica isolada
+├── infra-deploy.sh            # Script automatizado para implantação isolada deste repositório
+└── infra-destroy.sh           # Script automatizado para destruição isolada deste repositório
 ```
 
 > 💡 **Nota de Arquitetura:** Este projeto adota uma abordagem estritamente focada em dados e orquestração. Ele nunca cria ou altera recursos de rede ou servidores na Azure, mitigando riscos de retrabalho ou indisponibilidade da fundação da nuvem.

@@ -13,10 +13,8 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  # Vincula o grupo de variáveis da Library (Contém AZURE_TENANT_ID, CLIENT_ID e SECRET)
   - group: 'azure-databricks-credentials'
 
-  # Dinâmico: Define variáveis baseadas na branch que disparou o pipeline
   - ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
     - name: ENV_NAME
       value: 'PROD'
@@ -28,11 +26,9 @@ variables:
     - name: TF_VAR_FILE
       value: 'dev.tfvars'
 
-  # Vinculado à URL real do seu Workspace Databricks
   - name: DATABRICKS_HOST
     value: 'https://azuredatabricks.net'
   
-  # O nome do Job que seu databricks.tf cria dinamicamente
   - name: JOB_NAME
     value: 'JOB_1_PIPELINE_DE_CARGA_$(ENV_NAME)'
 
@@ -41,30 +37,11 @@ jobs:
   displayName: 'Deploy Terraform e Disparo no Databricks'
   steps:
 
-  # 🚀 PASSO NOVO 1: Instala o Terraform no agente do Azure DevOps
-  - task: TerraformInstaller@1
-    displayName: 'Instalar Terraform'
-    inputs:
-      terraformVersion: 'latest'
-
-  # 🚀 PASSO NOVO 2: Executa o Terraform para atualizar Notebooks, Códigos e o Job
-  - bash: |
-      echo "Iniciando o Deploy do Terraform para o ambiente $(ENV_NAME)..."
-      cd terraform
-      terraform init
-      terraform workspace select $(ENV_NAME) || terraform workspace new $(ENV_NAME)
-      terraform apply -var-file="envs/$(TF_VAR_FILE)" -auto-approve
-    displayName: 'Terraform Apply (Atualizar Código e Job)'
-    env:
-      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
-      ARM_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
-      ARM_TENANT_ID: $(AZURE_TENANT_ID)
-      DATABRICKS_TOKEN: $(db_token)
-
-  # Passo 3: Autentica e obter o token OAuth dinâmico para a API do Databricks
+  # 🚀 CORRIGIDO PASSO 1: Obter o Token OAuth ANTES do Terraform rodar
   - bash: |
       echo "Solicitando Token de Acesso Azure para o Databricks no ambiente $(ENV_NAME)..."
       
+      # URL Ajustada com a variável $(AZURE_TENANT_ID) para bater na API real de login da Microsoft
       TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
         -d "grant_type=client_credentials" \
         -d "client_id=$(AZURE_CLIENT_ID)" \
@@ -81,7 +58,26 @@ jobs:
       echo "##vso[task.setvariable variable=db_token;issetsecret=true]$DATABRICKS_TOKEN"
     displayName: 'Obter Token OAuth Azure'
 
-  # Passo 4: Buscar o ID do Job (atualizado pelo Terraform) e rodar a carga
+  - task: TerraformInstaller@1
+    displayName: 'Instalar Terraform'
+    inputs:
+      terraformVersion: 'latest'
+
+  # 🚀 CORRIGIDO PASSO 2: Agora o $(db_token) já existe e alimenta o Terraform com sucesso
+  - bash: |
+      echo "Iniciando o Deploy do Terraform para o ambiente $(ENV_NAME)..."
+      cd terraform
+      terraform init
+      terraform workspace select $(ENV_NAME) || terraform workspace new $(ENV_NAME)
+      terraform apply -var-file="envs/$(TF_VAR_FILE)" -auto-approve
+    displayName: 'Terraform Apply (Atualizar Código e Job)'
+    env:
+      ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
+      ARM_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+      ARM_TENANT_ID: $(AZURE_TENANT_ID)
+      TF_VAR_databricks_token: $(db_token) # Injeta o token como variável do Terraform se necessário
+
+  # Passo 4: Buscar o ID do Job e rodar a carga (Sem alterações, lógica excelente)
   - bash: |
       echo "Buscando o ID do Job no Databricks para: $(JOB_NAME)..."
       

@@ -18,19 +18,23 @@ O ecossistema foi projetado sob os pilares de **segurança corporativa, custo ot
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │ (Expõe outputs via tfstate)
                                      ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    2. CAMADA DE CONFIGURAÇÃO LÓGICA                     │
-│                  Repo Git: `azure-databricks-config`                    │
-│  (Conexão dinâmica, Vinculação ao Unity Catalog, Clusters e Workflows)  │
-└──────────────────┬──────────────────────────────────┬───────────────────┘
-                   │                                  │
-                   │ (Clone em tempo de execução)     │ (Clone em tempo de execução)
-                   ▼                                  ▼
-┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐
-│       3. APLICAÇÃO DE ETL/CARGA      │  │        4. APLICAÇÃO ANALÍTICA        │
-│      Repo: `projeto-carga-dados`     │  │    Repo: `projeto-consulta-dados`    │
-│    Notebook: `nb_carga_dados.ipynb`  │  │  Notebook: `nb_consulta_dashboard`   │
-└──────────────────────────────────────┘  └──────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                    2. CAMADA DE CONFIGURAÇÃO LÓGICA                               │
+│                  Repo Git: `azure-databricks-config`                              │
+│  (Governança, Conexão dinâmica, Clusters, sem saber de Jobs, Schemas e Catalogos) │
+└──────────────────┬──────────────────────────────────┬─────────────────────────────┘
+                   │
+                   │ (Apps podem ser publicadas no Cluster)
+                   ▼
+
+┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐
+│       APLICAÇÃO DE ETL/CARGA         │  │        APLICAÇÃO ANALÍTICA           │  │        APLICAÇÃO N                   │
+│      Repo: `projeto-carga-dados`     │  │    Repo: `projeto-consulta-dados`    │  │    Repo: `projeto-N`                 │
+│    Notebook: `nb_carga_dados.ipynb`  ├─►│  Notebook: `nb_consulta_dashboard`   ├─►│  Notebook: `nb_N`                    │
+│    Computação: Job Cluster Isolado   │  │  Computação: Job Cluster Isolado     │  │  Computação: Job Cluster Isolado     │
+│    Catalogos: Dentro da app Isolados │  │  Catalogos: Dentro da app Isolados   │  │  Catalogos: Dentro da app Isolados   │
+│    Schemas: Dentro da app Isolados   │  │  Schemas: Dentro da app Isolados     │  │  Schemas: Dentro da app Isolados     │
+└──────────────────────────────────────┘  └──────────────────────────────────────┘  └──────────────────────────────────────┘
 ```
 
 ---
@@ -57,9 +61,6 @@ Gerenciada pelo repositório `azure-databricks-config`, esta camada não consome
 ### 🧬 Governança via Unity Catalog (`databricks.tf`)
 A governança de dados opera de forma nativa e integrada ao ecossistema gerenciado padrão do Workspace, mapeando o catálogo de desenvolvimento real instalado na nuvem:
 * **Catálogo Gerenciado:** Consumido via `data_source` para evitar conflitos de privilégios ou erros de *Metastore storage root*.
-* **Schemas Estruturados:** O Terraform cria e gerencia de forma atômica dois Schemas isolados dentro do contêiner corporativo:
-  * `student`: Tabelas cadastrais e volumetria de Alunos.
-  * `course`: Grades curriculares e dados estruturados de Cursos.
 
 ### 💻 Estratégia de Computação e Otimização de Custos (Low-Cost)
 O ecossistema de computação adota a VM **`Standard_F4s_v2`** (Computação Otimizada de 4 núcleos) para mitigar de forma definitiva os limites de cotas da Azure comuns em assinaturas de laboratório/estudantes. O ambiente divide os perfis de processamento em duas categorias:
@@ -67,35 +68,37 @@ O ecossistema de computação adota a VM **`Standard_F4s_v2`** (Computação Oti
 1. **Cluster Interativo (Uso Ad-hoc dos Engenheiros):** Controlado dinamicamente por uma flag centralizada no arquivo local `config/settings.yaml`. Caso a flag `enable_cluster` seja alterada para `false`, o Terraform destrói a VM do cluster interativo para zerar as cobranças por ociosidade, mantendo os dados intactos no Data Lake. Possui desligamento automático configurado para 10 minutos de inatividade.
 2. **Computação de Tarefa (Job Cluster Ephemeral):** Os Jobs de produção não utilizam o cluster interativo. Cada tarefa levanta sua própria VM isolada `Standard_F4s_v2` no momento da execução e a destrói imediatamente após o término do processamento, garantindo isolamento total e cobrança restrita aos minutos de execução.
 
+### Catalogos Compartilhados entre Várias Apps de Forma Global
+
+Suponha que o Cliente consumidor do Cluster seja de área financeira onde as informações sobre Dados Básicos de Clientes, como Nome Social, Endereço, Dados de Contas.
+
+Nesse caso , Catálogos com Dados do Cliente poderão ser incluidos na camada do azure-databricks-config para facilitando para que todas as Apps do Cliente possam já nascer com essa conectividade demotratizada para realizar seus trabalhos e atender regras de negócio baseadas nos Dados Básicos do Cliente.
+
+Se os Catálogos consumidos por uma App forem exclusivos, essa responsabilidade deixa de ser do azure-databricks-config, que não deve conhecer ABSOLUTAMENTE NADA de uma App que possua esse nível de exclusividade.
+
 ---
 
 ## 🔄 4. Orquestração e Pipelines Independentes
 
+Cada projeto é totalmente responsável pelos seus jobs, catalogos, schemas, permitindo que o usuário os crie como prefetir e caso nao queira mais o projeto, pode simplesmente destruir via deploy sem causar nenhum efeito ao azure-databricks-basic-infra ou ao azure-databricks-config.
+
+* **Schemas Estruturados:** O Terraform cria e gerencia de forma atômica dois Schemas isolados dentro do contêiner corporativo, cada um dentro de sua própria estrutura de pastas.
+
 A malha de automação sequencial corporativa está dividida em **dois recursos independentes de Workflows (`databricks_job`)** dentro do arquivo `jobs.tf`. Essa decisão contorna as limitações de bloco único do Terraform e protege o ecossistema de dados:
 
 ```text
-┌──────────────────────────────────────┐      ┌──────────────────────────────────────┐
-│        JOB 1: PIPELINE DE CARGA      │      │      JOB 2: PIPELINE DE CONSULTA     │
-│  Repo: `projeto-carga-dados`         │      │  Repo: `projeto-consulta-dados`      │
-│  Notebook: `nb_carga_dados.ipynb`     ├─────►│  Notebook: `nb_consulta_dashboard`   │
-│  Computação: Job Cluster Isolado     │      │  Computação: Job Cluster Isolado     │
-└──────────────────────────────────────┘      └──────────────────────────────────────┘
+┌──────────────────────────────────────┐      ┌──────────────────────────────────────┐      ┌──────────────────────────────────────┐       
+│        JOB 1: PIPELINE DE CARGA      │      │      JOB 2: PIPELINE DE CONSULTA     │      │      JOB N: PIPELINE DE FUTURA       │       
+│  Repo: `projeto-carga-dados`         │      │  Repo: `projeto-consulta-dados`      │      │  Repo: `projeto-N`                   │       
+│  Notebook: `nb_carga_dados.ipynb`    ├─────►│  Notebook: `nb_consulta_dashboard`   │─────►│  Notebook: `nb_N`                    │       
+│  Computação: Job Cluster Isolado     │      │  Computação: Job Cluster Isolado     │      │  Computação: Job Cluster Isolado     │       
+│  Catalogos: Dentro da app Isolados   │      │  Catalogos: Dentro da app Isolados   │      │  Catalogos: Dentro da app Isolados   │       
+│  Schemas: Dentro da app Isolados     │      │  Schemas: Dentro da app Isolados     │      │  Schemas: Dentro da app Isolados     │       
+└──────────────────────────────────────┘      └──────────────────────────────────────┘      └──────────────────────────────────────┘
 ```
 
 * **Versionamento Nativo de Células:** As tarefas apontam para notebooks Jupyter reais (`.ipynb`) salvos no padrão de prefixo `nb_`, garantindo a correta renderização de outputs visuais e históricos de execução.
 * **Isolamento de Bibliotecas:** Cada pipeline gerencia suas próprias dependências de negócio por meio do arquivo `requirements.txt` presente na raiz de seu respectivo repositório, instalado em tempo de execução via biblioteca isolada de tarefa.
-* **Orquestração Segura via CI/CD:** A ordem sequencial é gerenciada pela esteira de CI/CD externa (Azure DevOps Pipelines). O Job de Consulta só recebe o gatilho de execução caso o Job de Carga e suas validações estatísticas de integridade terminem com sucesso completo (`exit 0`).
+* **Orquestração Segura via CI/CD:** A ordem sequencial é gerenciada pela esteira de CI/CD externa (Azure DevOps Pipelines). O Job de Consulta só recebe o gatilho de execução caso o Job de Carga e suas validações estatísticas de integridade terminem com sucesso completo (`exit 0`)
 
----
-
-## 🚀 5. Scripts de Automação e Ciclo de Vida
-
-Cada repositório possui seu próprio par de scripts operacionais, padronizados simetricamente para garantir independência total de execução.
-
-### 🏗️ No Repositório `azure-databricks-basic-infra`:
-* `./infra-install.sh dev`: Inicializa, valida e aplica a infraestrutura física (IaaS) na Azure, preservando o estado local.
-* `./infra-reset.sh dev`: Executa o plano de destruição física dos componentes da Azure.
-
-### ⚙️ No Repositório `azure-databricks-config`:
-* `./infra-install.sh dev`: Conecta-se dinamicamente ao Workspace ativo, descobre o ID numérico do catálogo de forma nativa e provisiona as regras de Unity Catalog, clusters e workflows sem nenhuma digitação ou parâmetro manual.
-* `./infra-reset.sh dev`: Remove com segurança a camada de governança e jobs antes da delegação de rede ser encerrada.
+**Observação:** Como citado acima referente a possibilidade de um Catálogo Democratizado, somente nesse contexto que uma App pode e deve ter acesso a esse Catálogo e seus Schemas internos. **Não é permitida nenhuma outra exceção**.

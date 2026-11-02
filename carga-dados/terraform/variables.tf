@@ -1,53 +1,80 @@
 # ==============================================================================
-# VARIÁVEIS LÓGICAS (DATABRICKS)
+# AMBIENTE
 # ==============================================================================
 
 variable "environment" {
   type        = string
-  description = "Identificador do ambiente (dev ou prod)"
+  description = "Identificador do ambiente (dev ou main)"
 }
+
+# ==============================================================================
+# DATABRICKS WORKSPACE
+# ==============================================================================
 
 variable "databricks_workspace_id" {
   type        = string
-  description = "O ID do recurso do Workspace na Azure (Injetado via Variável de Pipeline)"
+  description = "Resource ID do Workspace Databricks"
 }
 
 variable "databricks_workspace_url" {
   type        = string
-  description = "A URL de conexão do Workspace do Databricks (Injetada via Variável de Pipeline)"
-}
-
-# 🚀 ADICIONE ESTE BLOCO: Declaração obrigatória para o Token funcionar no providers.tf
-variable "databricks_token" {
-  type        = string
-  description = "Token de Acesso Pessoal (PAT) copiado estaticamente do console do Databricks"
-  sensitive   = true # Mascara o token nos logs de terminal e esteira por segurança
-}
-
-# ==============================================================================
-# VARIÁVEIS FÍSICAS DO BACKEND (AZURE)
-# ==============================================================================
-
-variable "resource_group_name" {
-  type        = string
-  description = "Nome do grupo de recursos onde está a Storage Account do estado"
-  default     = null # Permite passar batido se não mapeado no runtime lógico
-}
-
-variable "storage_account_name" {
-  type        = string
-  description = "Nome da Storage Account que armazena os estados"
-  default     = null
-}
-
-variable "container_name" {
-  type        = string
-  description = "Nome do container de blobs do estado"
-  default     = null
+  description = "URL do Workspace Databricks"
 }
 
 variable "databricks_workspace_numeric_id" {
   type        = string
-  description = "O ID do Workspace mapeado nos arquivos envs/dev/prod.tfvars"
-  default     = null
+  description = "ID numérico do Workspace Databricks"
+}
+
+# ==============================================================================
+# GIT
+# ==============================================================================
+
+variable "git_branch" {
+  type        = string
+  description = "Branch utilizada pelos Jobs Databricks"
+}
+
+# ==============================================================================
+# BACKEND TERRAFORM
+# ==============================================================================
+
+variable "resource_group_name" {
+  type        = string
+  description = "Resource Group do backend Terraform"
+}
+
+variable "storage_account_name" {
+  type        = string
+  description = "Storage Account do backend Terraform"
+}
+
+variable "container_name" {
+  type        = string
+  description = "Container do backend Terraform"
+}
+
+# ==============================================================================
+# SEGURANÇA
+# ==============================================================================
+
+variable "databricks_token" {
+  type        = string
+  description = "Token de acesso ao Databricks"
+  sensitive   = true
+}
+
+variable "catalog_storage_root" {
+  type        = string
+  description = "Caminho do contêiner ADLS Gen2 na Azure que servirá de storage root para o catálogo"
+}
+
+variable "databricks_storage_credential_name" {
+  type        = string
+  description = "Nome da credencial de armazenamento já existente no Unity Catalog"
+}
+
+variable "databricks_access_connector_id" {
+  type        = string
+  description = "ID do Access Connector mapeado na Azure pela infraestrutura básica corporativa"
 }

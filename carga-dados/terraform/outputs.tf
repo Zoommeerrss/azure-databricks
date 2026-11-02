@@ -1,36 +1,43 @@
 # ==============================================================================
-# METADADOS DOS CÓDIGOS E WORKSPACE
+# PROJETO CARGA-DADOS: METADADOS DE SAÍDA (APPLICATION ONLY)
 # ==============================================================================
-
-output "notebook_workspace_path" {
-  value       = databricks_notebook.nb_carga.path
-  description = "Caminho absoluto do Notebook de Carga dentro do Workspace do Databricks"
-}
 
 output "workspace_base_directory" {
+  description = "Diretório base lógico configurado para o ambiente"
   value       = local.workspace_base_path
-  description = "Diretório base onde todos os artefatos deste repositório foram publicados"
 }
 
-# ==============================================================================
-# METADADOS DO ORQUESTRADOR (JOB)
-# ==============================================================================
+output "notebook_workspace_path" {
+  description = "Caminho relativo de execução do notebook principal da aplicação"
+  value       = "nb_carga_dados.ipynb"
+}
+
+output "catalog_name" {
+  description = "Catálogo criado e gerenciado por esta aplicação"
+  value       = databricks_catalog.carga.name
+}
+
+output "student_schema_name" {
+  description = "Schema destinado aos dados de estudantes"
+  value       = databricks_schema.student.name
+}
+
+output "course_schema_name" {
+  description = "Schema destinado aos dados de cursos"
+  value       = databricks_schema.course.name
+}
+
+output "raw_volume_name" {
+  description = "Volume gerenciado para recepção dos arquivos brutos"
+  value       = databricks_volume.arquivos_brutos.name
+}
 
 output "databricks_job_id" {
+  description = "ID numérico do Job de Carga criado"
   value       = databricks_job.pipeline_carga.id
-  description = "O ID numérico único gerado pelo Databricks para o Job de Carga"
 }
 
 output "databricks_job_name" {
+  description = "Nome do Job de Carga criado"
   value       = databricks_job.pipeline_carga.name
-  description = "O nome exato do Job registrado no painel do Databricks"
-}
-
-# ==============================================================================
-# METADADOS DE GOVERNANÇA (CONEXÃO)
-# ==============================================================================
-
-output "target_catalog_name" {
-  value       = local.databricks_catalog_name
-  description = "Nome do Catálogo do Unity Catalog mapeado dinamicamente para este ambiente"
 }

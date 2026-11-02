@@ -1,66 +1,105 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# Captura o ambiente (ex: ./infra-reset.sh dev)
-AMBIENTE=$1
+# Captura o ambiente (ex: ./destroy_infra.sh dev)
+AMBIENTE="${1:-}"
 
-if [ "$AMBIENTE" != "dev" ] && [ "$AMBIENTE" != "prod" ]; then
-    echo "❌ Erro: Você deve especificar o ambiente de forma válida!"
-    echo "Uso correto: $0 [dev|prod]"
-    exit 1
-fi
-
-# 🚀 VALIDAÇÃO: Garante que o desenvolvedor configurou o Token de acesso localmente antes de rodar
-if [ -z "$DATABRICKS_TOKEN" ]; then
-    echo "❌ Erro: A variável de ambiente DATABRICKS_TOKEN não está definida no seu terminal!"
-    echo "Execute primeiro: export DATABRICKS_TOKEN='seu_token_aqui'"
-    exit 1
-fi
-
-# Define o arquivo .tfvars correto baseado no argumento informado
-TF_VAR_FILE="envs/${AMBIENTE}.tfvars"
-
-if [ ! -f "$TF_VAR_FILE" ]; then
-    echo "❌ Erro: Arquivo de variáveis não encontrado em: $TF_VAR_FILE"
+if [[ "$AMBIENTE" != "dev" && "$AMBIENTE" != "main" ]]; then
+    echo "❌ Erro: Você deve especificar um ambiente válido!"
+    echo "Uso correto: $0 [dev|main]"
     exit 1
 fi
 
 echo "====================================================================="
-echo "💥 INICIANDO DESTRUIÇÃO ANALÍTICA (CONSULTA): AMBIENTE = ${AMBIENTE^^}"
+echo "💥 DESTRUINDO INFRAESTRUTURA AZURE: ${AMBIENTE^^}"
 echo "====================================================================="
-echo "⚠️  ATENÇÃO: Isso removerá os Notebooks publicados e o JOB_2 deste projeto no Databricks!"
-read -p "👉 Tem certeza que deseja continuar? (y/N): " CONFIRMACAO
+echo ""
+echo "⚠️  ATENÇÃO:"
+echo "   • Workspace Databricks"
+echo "   • VNet e Subnets"
+echo "   • Storage Accounts"
+echo "   • Managed Resource Groups"
+echo "   • Recursos gerenciados pelo Terraform"
+echo ""
+
+read -p "Tem certeza absoluta que deseja continuar? (y/N): " CONFIRMACAO
+
 if [[ ! "$CONFIRMACAO" =~ ^[Yy]$ ]]; then
     echo "❌ Operação cancelada pelo usuário."
     exit 0
 fi
 
-# Entra na pasta do terraform se o script for executado da raiz do projeto
-if [ -d "terraform" ]; then
-    cd terraform
+echo ""
+echo "🧹 Limpando artefatos temporários..."
+
+find . -maxdepth 1 -name "*.tfplan" -type f -delete
+rm -f crash.log
+rm -f terraform.tfstate.backup
+rm -rf .terraform
+
+echo "✅ Limpeza concluída"
+
+echo ""
+echo "📥 Inicializando Terraform..."
+terraform init -upgrade -reconfigure
+
+MAX_TENTATIVAS=3
+TENTATIVA=1
+
+while [ $TENTATIVA -le $MAX_TENTATIVAS ]; do
+
+    echo ""
+    echo "====================================================================="
+    echo "💥 TENTATIVA ${TENTATIVA}/${MAX_TENTATIVAS}"
+    echo "====================================================================="
+
+    terraform plan \
+      -destroy \
+      -var-file="envs/${AMBIENTE}.tfvars" \
+      -var="environment=${AMBIENTE}" \
+      -out=destroy_plan.tfplan
+
+    terraform apply -auto-approve destroy_plan.tfplan
+
+    rm -f destroy_plan.tfplan
+
+    echo ""
+    echo "🔍 Verificando recursos restantes no state..."
+
+    RECURSOS_RESTANTES=$(terraform state list 2>/dev/null || true)
+
+    if [ -z "$RECURSOS_RESTANTES" ]; then
+        echo "✅ Nenhum recurso restante encontrado."
+        break
+    fi
+
+    echo ""
+    echo "⚠️ Recursos ainda existentes:"
+    echo "$RECURSOS_RESTANTES"
+
+    TENTATIVA=$((TENTATIVA + 1))
+
+    sleep 30
+
+done
+
+echo ""
+echo "🔎 Validação final..."
+
+RECURSOS_RESTANTES=$(terraform state list 2>/dev/null || true)
+
+if [ -n "$RECURSOS_RESTANTES" ]; then
+    echo ""
+    echo "❌ Ainda existem recursos no state após ${MAX_TENTATIVAS} tentativas:"
+    echo ""
+    echo "$RECURSOS_RESTANTES"
+    echo ""
+    echo "⚠️ Verifique dependências presas no Azure ou Databricks."
+    exit 1
 fi
 
-echo "🧹 Limpando planos antigos..."
-rm -f destroy_plan.tfplan
-
-echo "📥 Inicializando Provedores Databricks..."
-terraform init
-
-# 🚀 MULTIAMBIENTE: Garante a seleção do Workspace do Terraform correspondente para não destruir o ambiente errado
-echo "🌐 Alternando para o Workspace do Terraform: ${AMBIENTE}..."
-terraform workspace select ${AMBIENTE}
-
-echo "📊 Gerando Plano de Destruição Lógica Analítica..."
-# Usa o -var-file correto do ecossistema de consulta
-terraform plan -destroy -var-file="$TF_VAR_FILE" -out=destroy_plan.tfplan
-
-echo "💥 Executando o Clean-up Lógico no Databricks..."
-terraform apply destroy_plan.tfplan
-
-# Limpeza segura do plano temporário
-rm -f destroy_plan.tfplan
-
+echo ""
 echo "====================================================================="
-echo "✅ CONCLUÍDO! Componentes analíticos removidos com sucesso!"
-echo "👉 O Workspace está limpo para este projeto de consulta."
+echo "✅ DESTRUIÇÃO CONCLUÍDA COM SUCESSO!"
+echo "✅ Nenhum recurso restante no Terraform State."
 echo "====================================================================="
