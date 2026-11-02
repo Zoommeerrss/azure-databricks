@@ -1,13 +1,15 @@
 name: Deploy and Run - Consulta Dados Estudantes (Dashboard)
 
-trigger:
-  branches:
-    include:
-      - dev 
-      - main
-  paths:
-    exclude:
-      - CONSULTA_DADOS.md
+# 🔥 AUTOMÁTICO: O pipeline analítico só acorda se o pipeline de carga terminar com sucesso na branch dev ou main
+resources:
+  pipelines:
+  - pipeline: carga_pipeline
+    source: 'Deploy and Run - Carga Dados Estudantes (ETL)' # Nome exato do pipeline anterior
+    trigger:
+      branches:
+        include:
+          - dev
+          - main
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -37,11 +39,10 @@ jobs:
   displayName: 'Deploy Terraform e Disparo de Consulta'
   steps:
 
-  # 🚀 CORRIGIDO PASSO 1: Obter o Token OAuth ANTES de rodar o Terraform Apply
+  # 🚀 CORRIGIDO PASSO 1: URL ajustada com login.microsoftonline e $(AZURE_TENANT_ID) para autenticar na Azure real
   - bash: |
       echo "Solicitando Token de Acesso Azure para o Databricks no ambiente $(ENV_NAME)..."
       
-      # URL corrigida apontando para a API real de login identity da Microsoft
       TOKEN_RESPONSE=$(curl -s -X POST "https://microsoftonline.com" \
         -d "grant_type=client_credentials" \
         -d "client_id=$(AZURE_CLIENT_ID)" \
@@ -63,7 +64,7 @@ jobs:
     inputs:
       terraformVersion: 'latest'
 
-  # 🚀 CORRIGIDO PASSO 2: O Terraform executa agora com a variável $(db_token) devidamente populada
+  # 🚀 PASSO 2: Executa com o token efêmero validado e injetado nativamente
   - bash: |
       echo "Iniciando o Deploy do Terraform de Consulta para o ambiente $(ENV_NAME)..."
       cd terraform
@@ -75,9 +76,9 @@ jobs:
       ARM_CLIENT_ID: $(AZURE_CLIENT_ID)
       ARM_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
       ARM_TENANT_ID: $(AZURE_TENANT_ID)
-      TF_VAR_databricks_token: $(db_token) # Alinhado com o variables.tf do projeto de consulta
+      TF_VAR_databricks_token: $(db_token)
 
-  # Passo 3: Buscar o ID do Job 2 e executar o disparo no Databricks
+  # Passo 3: Buscar o ID do Job de Consulta e disparar a execução
   - bash: |
       echo "Buscando o ID do Job de Consulta no Databricks para: $(JOB_NAME)..."
       

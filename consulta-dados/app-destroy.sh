@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Captura o ambiente (ex: ./destroy_infra.sh dev)
+# Captura o ambiente (ex: ./app-destroy.sh dev)
 AMBIENTE="${1:-}"
 
 if [[ "$AMBIENTE" != "dev" && "$AMBIENTE" != "main" ]]; then
@@ -11,37 +11,41 @@ if [[ "$AMBIENTE" != "dev" && "$AMBIENTE" != "main" ]]; then
 fi
 
 echo "====================================================================="
-echo "💥 DESTRUINDO INFRAESTRUTURA AZURE: ${AMBIENTE^^}"
+echo "💥 DESTRUINDO INFRAESTRUTURA AZURE: ${AMBIENTE^^} (MODO AUTOMÁTICO)"
 echo "====================================================================="
-echo ""
-echo "⚠️  ATENÇÃO:"
-echo "   • Workspace Databricks"
-echo "   • VNet e Subnets"
-echo "   • Storage Accounts"
-echo "   • Managed Resource Groups"
-echo "   • Recursos gerenciados pelo Terraform"
-echo ""
 
-read -p "Tem certeza absoluta que deseja continuar? (y/N): " CONFIRMACAO
-
-if [[ ! "$CONFIRMACAO" =~ ^[Yy]$ ]]; then
-    echo "❌ Operação cancelada pelo usuário."
-    exit 0
+# =====================================================================
+# 🚀 CORRIGIDO: Entra no diretório correto antes das ações
+# =====================================================================
+if [ -d "terraform" ]; then
+    cd terraform
 fi
 
 echo ""
-echo "🧹 Limpando artefatos temporários..."
-
+echo "🧹 Limpando artefatos temporários locais..."
 find . -maxdepth 1 -name "*.tfplan" -type f -delete
 rm -f crash.log
 rm -f terraform.tfstate.backup
-rm -rf .terraform
 
-echo "✅ Limpeza concluída"
+# 🚀 ADICIONADO: Extrai os metadados físicos do tfvars para alimentar o backend do init sem intervenção manual
+RESOURCE_GROUP=$(grep -E '^resource_group_name' "envs/${AMBIENTE}.tfvars" | awk -F'=' '{print $2}' | tr -d '" ')
+STORAGE_ACCOUNT=$(grep -E '^storage_account_name' "envs/${AMBIENTE}.tfvars" | awk -F'=' '{print $2}' | tr -d '" ')
+CONTAINER_NAME=$(grep -E '^container_name' "envs/${AMBIENTE}.tfvars" | awk -F'=' '{print $2}' | tr -d '" ')
 
 echo ""
-echo "📥 Inicializando Terraform..."
-terraform init -upgrade -reconfigure
+echo "📥 Inicializando Terraform com as credenciais do Backend..."
+# 🚀 CORRIGIDO: Alimenta o backend dinamicamente para evitar o erro de falta de chaves da Azure
+terraform init \
+  -upgrade \
+  -reconfigure \
+  -backend-config="resource_group_name=${RESOURCE_GROUP}" \
+  -backend-config="storage_account_name=${STORAGE_ACCOUNT}" \
+  -backend-config="container_name=${CONTAINER_NAME}" \
+  -input=false
+
+echo ""
+echo "🔄 Selecionando o Workspace do ambiente..."
+terraform workspace select -or-create "$AMBIENTE"
 
 MAX_TENTATIVAS=3
 TENTATIVA=1
@@ -59,6 +63,7 @@ while [ $TENTATIVA -le $MAX_TENTATIVAS ]; do
       -var="environment=${AMBIENTE}" \
       -out=destroy_plan.tfplan
 
+    # Executa sem pedir confirmação (auto-approve)
     terraform apply -auto-approve destroy_plan.tfplan
 
     rm -f destroy_plan.tfplan

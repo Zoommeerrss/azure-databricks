@@ -6,23 +6,23 @@ resource "databricks_job" "pipeline_carga" {
   name                = "Pipeline-Automatizado-Carga-${var.environment}"
   max_concurrent_runs = 1
 
-  # 🔥 CONDICIONAL: Só injeta o bloco git_source se a URL não for genérica ou se for Fase 2
-  dynamic "git_source" {
-    for_each = var.git_branch != "dev" && var.git_branch != "main" ? [] : [1] # Ajuste conforme sua conveniência de flag
-    content {
-      url      = "https://github.com" # Substitua quando liberado
-      provider = "gitHub"
-      branch   = var.git_branch
-    }
-  }
+  # 🔒 FASE 1 (WSL Local): Bloco Git comentado para impedir que o Databricks tente buscar uma URL inválida
+  # dynamic "git_source" {
+  #   for_each = var.git_branch != "dev" && var.git_branch != "main" ? [] : [1]
+  #   content {
+  #     url      = "https://github.com"
+  #     provider = "gitHub"
+  #     branch   = var.git_branch
+  #   }
+  # }
 
   task {
     task_key = "Carga_Dados_Estudantes"
 
     notebook_task {
-      # 🔥 DINÂMICO: Se for Fase 1 (Local), aponta para o caminho que seu orquestrador subiu no WS. Se for Fase 2, lê a raiz do Git.
-      notebook_path = var.git_branch == "local_wsl" ? "${local.workspace_base_path}/notebooks/nb_carga_dados" : "nb_carga_dados"
-      source        = var.git_branch == "local_wsl" ? "WORKSPACE" : "GIT"
+      # 🚀 TRAVADO NO WORKSPACE: Lê direto o notebook que o Terraform acabou de subir com sucesso
+      notebook_path = databricks_notebook.nb_carga.path
+      source        = "WORKSPACE"
 
       base_parameters = {
         catalog_name = databricks_catalog.carga.name
@@ -30,13 +30,15 @@ resource "databricks_job" "pipeline_carga" {
     }
 
     library {
-      requirements = "requirements.txt"
+      requirements = "/Workspace${databricks_workspace_file.requirements.path}"
     }
 
     dynamic "new_cluster" {
       for_each = [1]
       content {
-        spark_version = "14.3.x-scala2.12"
+        # 🔥 GARANTE O SINGLE-NODE: Força zero workers, o que desliga a necessidade da flag conflitante
+        num_workers   = 0
+        spark_version = "15.4.x-scala2.12"
         node_type_id  = "Standard_F4s_v2"
 
         spark_conf = {
@@ -48,13 +50,17 @@ resource "databricks_job" "pipeline_carga" {
         }
       }
     }
+
   }
 
   tags = local.global_tags
 
+  # 🔥 CORRIGIDO: Inclui a dependência do notebook e do requirements para blindar o nascimento do Job contra caminhos fantasmas
   depends_on = [
     databricks_catalog.carga,
     databricks_schema.student,
-    databricks_schema.course
+    databricks_schema.course,
+    databricks_notebook.nb_carga,
+    databricks_workspace_file.requirements
   ]
 }

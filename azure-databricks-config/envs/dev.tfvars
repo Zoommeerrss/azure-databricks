@@ -12,5 +12,5 @@ git_branch = "dev"
 autotermination_minutes = 10
 
 # Databricks
-databricks_catalog_name         = "dbw_dbx_lowcost_dev_7405605472483628"
-databricks_workspace_numeric_id = "7405605472483628"
+databricks_catalog_name         = "dbw_dbx_lowcost_dev_7405605929178275"
+databricks_workspace_numeric_id = "7405605929178275"

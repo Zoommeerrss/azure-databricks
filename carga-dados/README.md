@@ -87,3 +87,23 @@ O projeto adota o isolamento completo de ambientes mapeado de forma nativa por G
 3. **Workspace Isolation**: Executa um `terraform workspace select` correspondente ao ambiente. Caso não exista, cria-o em tempo de execução.
 4. **Deploy**: Roda o `terraform apply` passando o arquivo de variáveis do ambiente específico, atualizando o código e as definições orquestradas na nuvem.
 5. **Run Now**: Executa uma chamada à API do Databricks para disparar a execução imediata do Job recém-atualizado de maneira assíncrona.
+
+# Troubleshooting
+
+## Could not load the schema for provider registry.terraform.io/hashicorp/azurerm
+
+Esse erro (Plugin did not respond) é um travamento clássico do binário do provider azurerm que acontece especificamente no WSL/Ubuntu.
+Ele não é um problema no seu código Terraform, mas sim um bug de comunicação via gRPC (protocolo que o Terraform usa para falar com os plugins instalados) que ocorre quando o processo do provider trava em segundo plano na memória do Linux ou quando a pasta .terraform local corrompe após muitas modificações rápidas de arquivos.
+Para destravar o seu terminal Ubuntu instantaneamente e fazer o deploy passar limpo, execute esta sequência de comandos de limpeza no seu WSL:
+
+```bash
+# 1. Mata qualquer processo órfão do Terraform ou do provider azurerm travado na memória
+killall -9 terraform terraform-provider-azurerm_v3.117.1 terraform-provider-databricks 2>/dev/null
+
+# 2. Remove a pasta de plugins locais e o cache corrompido (Não apaga seu código, apenas o download dos providers)
+rm -rf .terraform .terraform.lock.hcl
+
+# 3. Força o Terraform a baixar uma cópia totalmente nova e limpa dos plugins
+terraform init
+
+```

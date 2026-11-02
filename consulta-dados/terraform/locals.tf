@@ -5,11 +5,10 @@ locals {
   # O nome do catálogo próprio desta aplicação analítica
   databricks_catalog_name = "dbw_dbx_lowcost_${local.env}"
 
-  # 🚀 ADICIONADO: Referência do catálogo de ingestão que este projeto vai consumir.
-  # O nome pode ser passado via variável de entrada ou mantendo a previsibilidade do padrão.
+  # Referência do catálogo de ingestão (origem) que este projeto vai consumir
   source_catalog_name = "catalog_carga_${local.env}"
 
-  # 🚀 CORRIGIDO: Alterado para '/Shared' para manter os projetos na mesma estrutura pública
+  # Alterado para '/Shared' para manter os projetos na mesma estrutura pública
   workspace_base_path = "/Shared/Production/consulta-dados_${local.env}"
 
   # Tags organizacionais aplicadas aos recursos deste projeto analítico
