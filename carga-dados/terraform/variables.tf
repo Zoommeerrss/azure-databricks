@@ -78,3 +78,10 @@ variable "databricks_access_connector_id" {
   type        = string
   description = "ID do Access Connector mapeado na Azure pela infraestrutura básica corporativa"
 }
+
+variable "authorized_offer_groups" {
+  description = "Lista de grupos de ofertas de negócio autorizados a ler a camada Ouro"
+  type        = list(string)
+  default     = ["grp-oferta-students"]
+}
+

@@ -1,6 +1,6 @@
 # 🏛️ Documentação de Arquitetura: Ecossistema Azure Databricks Decoupled
 
-Este documento descreve a arquitetura técnica, as diretrizes de governança e a estratégia de implantação do ecossistema de dados baseado em **Azure Databricks** e **Unity Catalog**. 
+Este documento descreve a arquitetura técnica, as diretrizes de governança e a estratégia de implantação do ecossistema de dados baseado em **Azure Databricks** e **Unity Catalog**.
 
 O projeto adota o padrão de **Design de Arquitetura em Duas Camadas (Two-Tier IaC)**, separando de forma estrita o ciclo de vida dos recursos físicos da nuvem (IaaS/PaaS) das configurações e regras lógicas de dados (Governança e Orquestração).
 
@@ -8,33 +8,31 @@ O projeto adota o padrão de **Design de Arquitetura em Duas Camadas (Two-Tier I
 
 ## 🎨 1. Visão Geral da Arquitetura
 
-O ecossistema foi projetado sob os pilares de **segurança corporativa, custo otimizado (Low-Cost) e isolamento completo de escopo**. Em vez de um repositório monolítico de infraestrutura, a engenharia foi dividida em quatro repositórios independentes no GitHub, garantindo ciclos de vida isolados e pipelines de CI/CD autônomos.
+O ecossistema foi projetado sob os pilares de **segurança corporativa (Zero Trust), custo otimizado (Low-Cost) e isolamento completo de escopo**. Em vez de um repositório monolítico de infraestrutura, a engenharia foi dividida em repositórios independentes no GitHub, garantindo ciclos de vida isolados e pipelines de CI/CD autônomos.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    1. CAMADA DE INFRAESTRUTURA BÁSICA                   │
-│               Repo Git: `azure-databricks-basic-infra`                  │
-│  (Criação de Grupo de Recursos, VNet, Subnets Delegadas e Workspace)    │
+│ 1. CAMADA DE INFRAESTRUTURA BÁSICA                                      │
+│ Repo Git: `azure-databricks-basic-infra`                                │
+│ (Criação de Grupo de Recursos, VNet, Subnets Delegadas e Workspace)     │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │ (Expõe outputs via tfstate)
                                      ▼
 ┌───────────────────────────────────────────────────────────────────────────────────┐
-│                    2. CAMADA DE CONFIGURAÇÃO LÓGICA                               │
-│                  Repo Git: `azure-databricks-config`                              │
-│  (Governança, Conexão dinâmica, Clusters, sem saber de Jobs, Schemas e Catalogos) │
+│ 2. CAMADA DE CONFIGURAÇÃO LÓGICA (100% AGNÓSTICA A NEGÓCIO E OFERTAS)             │
+│ Repo Git: `azure-databricks-config`                                               │
+│ (Governança base, Conexão dinâmica, Cluster Interativo, sem saber de Apps/Ofertas)│
 └──────────────────┬──────────────────────────────────┬─────────────────────────────┘
-                   │
-                   │ (Apps podem ser publicadas no Cluster)
-                   ▼
-
-┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐
-│       APLICAÇÃO DE ETL/CARGA         │  │        APLICAÇÃO ANALÍTICA           │  │        APLICAÇÃO N                   │
-│      Repo: `projeto-carga-dados`     │  │    Repo: `projeto-consulta-dados`    │  │    Repo: `projeto-N`                 │
-│    Notebook: `nb_carga_dados.ipynb`  ├─►│  Notebook: `nb_consulta_dashboard`   ├─►│  Notebook: `nb_N`                    │
-│    Computação: Job Cluster Isolado   │  │  Computação: Job Cluster Isolado     │  │  Computação: Job Cluster Isolado     │
-│    Catalogos: Dentro da app Isolados │  │  Catalogos: Dentro da app Isolados   │  │  Catalogos: Dentro da app Isolados   │
-│    Schemas: Dentro da app Isolados   │  │  Schemas: Dentro da app Isolados     │  │  Schemas: Dentro da app Isolados     │
-└──────────────────────────────────────┘  └──────────────────────────────────────┘  └──────────────────────────────────────┘
+                   │                                  │
+                   ▼                                  ▼
+┌──────────────────────────────────────┐ ┌──────────────────────────────────────┐ ┌──────────────────────────────────────┐
+│ APP PRODUCER (DEMOCRATIZADA)         │ │ APP CONSUMER (ANALÍTICA)             │ │ APP ISOLADA (PRIVADA / INTERNA)      │
+│ Repo: `projeto-carga-dados`          │ │ Repo: `projeto-consulta-dados`       │ │ Repo: `projeto-interno-N`            │
+│ Dir: `/Shared/Production/<app>_<env>`│ │ Dir: `/Shared/Production/<app>_<env>`│ │ Dir: `/Apps/<app>_<env>` (Restrito)  │
+│ Computação: Job Cluster Efêmero      │ │ Computação: Job Cluster Efêmero      │ │ Computação: Job Cluster Efêmero      │
+│ Catálogos/Schemas: Criados na App    │ │ Catálogos/Schemas: Consome via Grant │ │ Catálogos/Schemas: Privados na App   │
+│ Grants: `grants.tf` (Ofertas N:N)    │ │ Grants: Sem exposição externa        │ │ Grants: `authorized_offer_groups=[]` │
+└──────────────────────────────────────┘ └──────────────────────────────────────┘ └──────────────────────────────────────┘
 ```
 
 ---
@@ -58,9 +56,9 @@ Gerenciada exclusivamente pelo repositório `azure-databricks-basic-infra`, esta
 
 Gerenciada pelo repositório `azure-databricks-config`, esta camada não consome recursos diretos da Azure. Ela utiliza o mecanismo **`terraform_remote_state`** para ler a memória do projeto físico de forma automática e transparente, conectando-se ao endpoint gerado sem qualquer intervenção humana ou parâmetros manuais.
 
-### 🧬 Governança via Unity Catalog (`databricks.tf`)
-A governança de dados opera de forma nativa e integrada ao ecossistema gerenciado padrão do Workspace, mapeando o catálogo de desenvolvimento real instalado na nuvem:
+### 🧬 Governança Base via Unity Catalog (`databricks.tf`)
 * **Catálogo Gerenciado:** Consumido via `data_source` para evitar conflitos de privilégios ou erros de *Metastore storage root*.
+* **Agnosticismo Total e Imutabilidade:** Esta camada **nunca** é alterada para atender demandas de aplicações ou grupos de negócio. Ela desconhece catálogos, schemas, jobs, usuários, ofertas de negócio ou regras de acesso das aplicações.
 
 ### 💻 Estratégia de Computação e Otimização de Custos (Low-Cost)
 O ecossistema de computação adota a VM **`Standard_F4s_v2`** (Computação Otimizada de 4 núcleos) para mitigar de forma definitiva os limites de cotas da Azure comuns em assinaturas de laboratório/estudantes. O ambiente divide os perfis de processamento em duas categorias:
@@ -68,37 +66,60 @@ O ecossistema de computação adota a VM **`Standard_F4s_v2`** (Computação Oti
 1. **Cluster Interativo (Uso Ad-hoc dos Engenheiros):** Controlado dinamicamente por uma flag centralizada no arquivo local `config/settings.yaml`. Caso a flag `enable_cluster` seja alterada para `false`, o Terraform destrói a VM do cluster interativo para zerar as cobranças por ociosidade, mantendo os dados intactos no Data Lake. Possui desligamento automático configurado para 10 minutos de inatividade.
 2. **Computação de Tarefa (Job Cluster Ephemeral):** Os Jobs de produção não utilizam o cluster interativo. Cada tarefa levanta sua própria VM isolada `Standard_F4s_v2` no momento da execução e a destrói imediatamente após o término do processamento, garantindo isolamento total e cobrança restrita aos minutos de execução.
 
-### Catalogos Compartilhados entre Várias Apps de Forma Global
-
-Suponha que o Cliente consumidor do Cluster seja de área financeira onde as informações sobre Dados Básicos de Clientes, como Nome Social, Endereço, Dados de Contas.
-
-Nesse caso , Catálogos com Dados do Cliente poderão ser incluidos na camada do azure-databricks-config para facilitando para que todas as Apps do Cliente possam já nascer com essa conectividade demotratizada para realizar seus trabalhos e atender regras de negócio baseadas nos Dados Básicos do Cliente.
-
-Se os Catálogos consumidos por uma App forem exclusivos, essa responsabilidade deixa de ser do azure-databricks-config, que não deve conhecer ABSOLUTAMENTE NADA de uma App que possua esse nível de exclusividade.
+### 🌐 Catálogos Compartilhados entre Várias Apps
+A responsabilidade de criar, manter e democratizar catálogos pertence exclusivamente à **App Producer** dona daquele domínio de negócio (ex: `projeto-carga-dados`), e **nunca** ao `azure-databricks-config`. A própria **App Producer** organiza seus schemas no arquivo `databricks.tf` (sem definir `owner = "account users"`, garantindo bloqueio por padrão) e formaliza o contrato de compartilhamento em um arquivo dedicado **`grants.tf`**, concedendo permissões apenas para os grupos de ofertas de negócio autorizados.
 
 ---
 
-## 🔄 4. Orquestração e Pipelines Independentes
+## 🔐 4. Jornada de Permissionamento e Governança por Ofertas de Negócio (RBAC N:N)
 
-Cada projeto é totalmente responsável pelos seus jobs, catalogos, schemas, permitindo que o usuário os crie como prefetir e caso nao queira mais o projeto, pode simplesmente destruir via deploy sem causar nenhum efeito ao azure-databricks-basic-infra ou ao azure-databricks-config.
+Para evitar qualquer acoplamento entre a gestão de pessoas e as esteiras de infraestrutura, o controle de acesso segue o modelo **Zero Trust (*Deny by Default*)** baseado estritamente em **Grupos por Ofertas de Negócio (`grp-oferta-*`)**, suportando relacionamento **N:N** (um usuário em N ofertas e uma oferta com N usuários).
 
-* **Schemas Estruturados:** O Terraform cria e gerencia de forma atômica dois Schemas isolados dentro do contêiner corporativo, cada um dentro de sua própria estrutura de pastas.
+**Regra de Ouro:** Nenhum usuário comum (exceto o *Administrator Total*) consegue acessar o Workspace, visualizar catálogos ou acompanhar jobs sem estar vinculado a pelo menos um Grupo de Oferta.
 
-A malha de automação sequencial corporativa está dividida em **dois recursos independentes de Workflows (`databricks_job`)** dentro do arquivo `jobs.tf`. Essa decisão contorna as limitações de bloco único do Terraform e protege o ecossistema de dados:
+### 🔄 Fluxo Operacional de Ponta a Ponta (PO vs. Time de Dados)
 
 ```text
-┌──────────────────────────────────────┐      ┌──────────────────────────────────────┐      ┌──────────────────────────────────────┐       
-│        JOB 1: PIPELINE DE CARGA      │      │      JOB 2: PIPELINE DE CONSULTA     │      │      JOB N: PIPELINE DE FUTURA       │       
-│  Repo: `projeto-carga-dados`         │      │  Repo: `projeto-consulta-dados`      │      │  Repo: `projeto-N`                   │       
-│  Notebook: `nb_carga_dados.ipynb`    ├─────►│  Notebook: `nb_consulta_dashboard`   │─────►│  Notebook: `nb_N`                    │       
-│  Computação: Job Cluster Isolado     │      │  Computação: Job Cluster Isolado     │      │  Computação: Job Cluster Isolado     │       
-│  Catalogos: Dentro da app Isolados   │      │  Catalogos: Dentro da app Isolados   │      │  Catalogos: Dentro da app Isolados   │       
-│  Schemas: Dentro da app Isolados     │      │  Schemas: Dentro da app Isolados     │      │  Schemas: Dentro da app Isolados     │       
-└──────────────────────────────────────┘      └──────────────────────────────────────┘      └──────────────────────────────────────┘
+[1. Product Owner / IAM]             [2. Time de Dados (App Producer)]        [3. Product Owner / IAM (Dia a Dia)]
+Convida Guest (Entra ID) +           Informa `grp-oferta-*` na var e          Adiciona / Remove N usuários
+Cria Grupo da Oferta +               roda deploy da App (`grants.tf`)         nos grupos das ofertas (N:N)
+Vincula Grupo ao Workspace           (Libera Dados + CAN_VIEW nos Jobs)       (Acesso imediato, zero deploy)
 ```
 
-* **Versionamento Nativo de Células:** As tarefas apontam para notebooks Jupyter reais (`.ipynb`) salvos no padrão de prefixo `nb_`, garantindo a correta renderização de outputs visuais e históricos de execução.
-* **Isolamento de Bibliotecas:** Cada pipeline gerencia suas próprias dependências de negócio por meio do arquivo `requirements.txt` presente na raiz de seu respectivo repositório, instalado em tempo de execução via biblioteca isolada de tarefa.
-* **Orquestração Segura via CI/CD:** A ordem sequencial é gerenciada pela esteira de CI/CD externa (Azure DevOps Pipelines). O Job de Consulta só recebe o gatilho de execução caso o Job de Carga e suas validações estatísticas de integridade terminem com sucesso completo (`exit 0`)
+#### Etapa 1: Gestão de Identidade e Entrada (Responsabilidade do Product Owner / IAM)
+Operada diretamente na interface administrativa (sem código e sem tocar na infraestrutura):
+1. **Convite no Microsoft Entra ID:** Para usuários externos ao domínio/tenant, o PO envia o convite B2B como **Guest (Convidado)** no Portal Azure (*Microsoft Entra ID > Usuários > Convidar usuário externo*). O usuário deve aceitar o convite antes do primeiro acesso.
+2. **Nascimento da Oferta como Grupo de Acesso:** Na **Databricks Account Console** (`accounts.azuredatabricks.net > User management > Groups`), o PO cria o grupo seguindo o padrão da oferta (ex: `grp-oferta-students`, `grp-oferta-credito`).
+3. **Vínculo de Usuários (Relacionamento N:N):** O PO adiciona os usuários dentro dos respectivos grupos de ofertas. Um mesmo usuário pode pertencer a múltiplos grupos simultaneamente.
+4. **Liberação da Porta do Workspace:** Na *Account Console > Workspaces > [Workspace] > Permissions* (ou via *Workspace Settings > Identity and access > Groups*), o PO vincula **exclusivamente o Grupo da Oferta** com a role **User** (garantindo *Workspace access* e bloqueando criação de clusters/pools).
+   * *Resultado:* O usuário consegue acessar a URL direta do Workspace (`https://<workspace-id>.azuredatabricks.net`), mas vê **zero dados** e **zero jobs** até que uma App Producer conceda permissão ao grupo.
+5. **Handoff Pré-Deploy:** O PO informa o nome exato do grupo criado (`grp-oferta-*`) ao time responsável pela **App Producer** antes do deploy da aplicação.
 
-**Observação:** Como citado acima referente a possibilidade de um Catálogo Democratizado, somente nesse contexto que uma App pode e deve ter acesso a esse Catálogo e seus Schemas internos. **Não é permitida nenhuma outra exceção**.
+#### Etapa 2: Contrato de Dados e Execuções na App Producer (`grants.tf`)
+No repositório da aplicação produtora, o acesso é formalizado de forma declarativa e idempotente:
+1. **Validação Dinâmica de Grupos:** O Terraform valida a existência de todos os grupos informados na lista `var.authorized_offer_groups` via `data "databricks_group"`.
+2. **Privilégios em Cascata no Unity Catalog:** O recurso `databricks_grants` concede `USE_CATALOG` no catálogo da aplicação e `USE_SCHEMA` + `SELECT` exclusivamente nos schemas democratizados (mantendo o catálogo fechado para usuários sem grupo ao omitir `owner = "account users"`).
+3. **Visibilidade de Execuções para N Jobs (`CAN_VIEW`):** Todos os jobs da aplicação são mapeados em `local.app_jobs` (no `locals.tf`) e recebem permissão **`CAN_VIEW`** via `databricks_permissions` com `for_each`. Isso permite que os membros da oferta acompanhem quando os pipelines rodam e consultem logs na aba *Workflows*, mantendo o botão **Run now** bloqueado.
+
+#### Etapa 3: Manutenção Contínua N:N (Autonomia Total do PO)
+* **Inclusão/Remoção de Usuários:** Após o deploy da App Producer, o PO adiciona ou remove usuários nos grupos de oferta diretamente na Account Console. O efeito nos dados e na visibilidade dos jobs é **imediato**, sem necessidade de executar esteiras Terraform.
+
+---
+
+## 🛠️ 5. Estrutura Interna das Aplicações e Padrões de Isolamento
+
+### 📦 Tipos de Aplicações Suportadas pelo Mesmo Template IaC
+
+| Atributo | App Producer (Democratizada) | App Consumer (Analítica) | App Isolada (Privada / Interna) |
+| :--- | :--- | :--- | :--- |
+| **Diretório no Workspace** | `/Shared/Production/<app>_<env>` | `/Shared/Production/<app>_<env>` | `/Apps/<app>_<env>` (acesso restrito) |
+| **Catálogo e Schemas** | Criados na App (sem `owner` aberto) | Não cria (consome via grants) | Criados na App (100% privados) |
+| **`authorized_offer_groups`** | Lista de grupos autorizados (`["grp-..."]`) | Lista de grupos da App (se houver jobs) | `[]` (Lista vazia — zero exposição externa) |
+| **Visibilidade dos Jobs** | `CAN_VIEW` para grupos autorizados | `CAN_VIEW` para grupos autorizados | Invisível para usuários comuns |
+| **Integração com Outros Dados** | Publica dados para Consumers | Lê catálogos existentes (`SELECT`) | Pode ler (`SELECT`) ou gravar (`MODIFY`) em catálogos existentes via identidade de execução (`run_as`) |
+
+### ⚙️ Boas Práticas de Engenharia e CI/CD
+* **Separação de Responsabilidades IaC:** `databricks.tf` gerencia recursos de dados (`Storage Credential`, `External Location`, `Catalog`, `Schemas`, `Volumes` e propagação RBAC via `time_sleep`), `jobs.tf` gerencia os workflows em *Job Clusters Efêmeros* e `grants.tf` isola os contratos de permissão.
+* **Isolamento de Estado (`tfstate`):** Cada repositório possui sua própria `key` exclusiva no backend remoto da Azure (ex: `carga-dados.tfstate`), evitando qualquer colisão entre projetos ou ambientes.
+* **Notebooks e Dependências:** Notebooks Jupyter (`.ipynb`) seguem o prefixo `nb_` com dependências isoladas no `requirements.txt` da raiz de cada projeto. Para testes ad-hoc em notebooks compartilhados, os usuários devem clonar o arquivo para sua pasta pessoal (`Workspace > Users > <email>`), evitando sobrescrever outputs na pasta compartilhada.
+* **Orquestração Sequencial via CI/CD:** A ordem de execução entre repositórios independentes é controlada pela esteira externa (GitHub Actions / Azure DevOps), disparando consumidores apenas após o término com sucesso (`exit 0`) do produtor.

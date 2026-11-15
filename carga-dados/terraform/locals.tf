@@ -30,4 +30,14 @@ locals {
     CostCenter  = "Auditoria-DataQuality-${local.env}"
     Layer       = "Data-App-Carga"
   }
+
+  # ============================================================================
+  # JOBS DA APLICAÇÃO (N JOBS PARA GOVERNANÇA DE ACESSO)
+  # ============================================================================
+
+  app_jobs = {
+    pipeline_carga = databricks_job.pipeline_carga.id
+    # Para novos jobs no futuro, adicione aqui:
+    # pipeline_validacao = databricks_job.pipeline_validacao.id
+  }
 }
